@@ -1,0 +1,448 @@
+lec4-----------------------------------------------------------------------------------------------------------------------
+Tools to be installed 
+VScode , git , aws cli , terraform , mobaxtream
+
+lec15----------------------------------------------------------------------------------------------------------------------
+Writing first terraform file to create EC2instance under terraform_code file 
+
+terraform {
+  required_providers {
+    aws = {
+        source = "hashicorp/aws"
+        version = "5.32.1"
+    }
+  }
+}
+
+provider "aws" {
+    region = "ap-south-1"
+}
+
+resource "aws_instance" "dev-server" {
+  ami = "ami-03f4878755434977f"
+  instance_type = "t2.medium"
+  key_name = "talachavi"
+  vpc_security_group_ids = [aws_security_group.dev-sg.id]
+  subnet_id = aws_subnet.dev-pub-subnet-01.id 
+  for_each = toset(["Jenkins-Master" , "Jenkins-Slave" , "Ansible-Server"])
+  tags = {
+    Name = "${each.key}"
+  }
+}
+
+resource "aws_security_group" "dev-sg" {
+    name = "dev-sg"
+    vpc_id = aws_vpc.dev-vpc.id
+    description = "ssh access"
+
+    ingress {
+        description = "ssh access"
+        from_port = 22
+        to_port = 22
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+    egress {
+        from_port = 0
+        to_port = 0 
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+        ipv6_cidr_blocks = ["::/0"]
+    }
+    tags = {
+      Name = "dev-sg"
+    }
+}
+
+resource "aws_vpc" "dev-vpc" {
+    cidr_block = "10.1.0.0/16"
+    tags = {
+        Name = "dev-vpc"
+    } 
+}
+
+resource "aws_subnet" "dev-pub-subnet-01" {
+    vpc_id = aws_vpc.dev-vpc.id
+    cidr_block = "10.1.1.0/24"
+    map_public_ip_on_launch = "true"
+    availability_zone = "ap-south-1a"
+    tags = {
+      Name = "dev-pub-subnet-01"
+    }
+
+}
+resource "aws_subnet" "dev-pub-subnet-02" {
+    vpc_id = aws_vpc.dev-vpc.id
+    cidr_block = "10.1.2.0/24"
+    map_public_ip_on_launch = "true"
+    availability_zone = "ap-south-1b"
+    tags = {
+      Name = "dev-pub-subnet-02"
+    }
+
+}
+resource "aws_internet_gateway" "dev-igw" {
+    vpc_id = aws_vpc.dev-vpc.id
+    tags = {
+        Name = "dev-igw"
+    }
+
+}
+resource "aws_route_table" "dev-pub-rt" {
+    vpc_id = aws_vpc.dev-vpc.id
+    route {
+        cidr_block = "0.0.0.0/0"
+        gateway_id = aws_internet_gateway.dev-igw.id
+    }
+
+}
+resource "aws_route_table_association" "dev-rt-pu-subnet-01" {
+    subnet_id = aws_subnet.dev-pub-subnet-01.id
+    route_table_id = aws_route_table.dev-pub-rt.id
+
+}
+resource "aws_route_table_association" "dev-rt-pu-subnet-02" {
+    subnet_id = aws_subnet.dev-pub-subnet-02.id
+    route_table_id = aws_route_table.dev-pub-rt.id
+}
+
+output "public_ip" {
+  value = {
+    for instance_key, instance_value in aws_instance.dev-server : instance_key => instance_value.public_ip
+  }
+}
+output "private_ip" {
+  value = { 
+    for instance_key, instance_value in aws_instance.dev-server : instance_key => instance_value.private_ip 
+  }
+}
+
+terraform init
+terraform plan 
+terrafrom apply --auto-approve
+terraform destroy --auto-approve
+
+In above file we are craetting the infrastrucutre through terraform (Ansible,Jenkins-master, Jenkins-Slaves)
+
+---------------------------------------------------Ansible-----------------------------------------------------------------
+Lec25(Ansible Installation )----------------------------------------------------------------------------------
+Connect to ansible m/c and other jenkins m/c
+and run the the following command in ansible m/c
+
+sudo apt update && sudo apt upgrade -y
+
+sudo apt install software-properties-common
+
+sudo add-apt-repository --yes --update ppa:ansible/ansible
+
+sudo apt install ansible -y
+
+Lec26(Adding other m/c to ansible server)----------------------------------------------------------------------------------
+Creating host inventory file 
+
+Copy the pem key file to the ec2 m/c
+
+chmod 400 talachavi.pem
+
+cd /opt
+
+vi hosts
+[jenkins-master]
+10.1.1.193
+[jenkins-master:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/opt/talachavi.pem
+[jenkins-slave]
+10.1.1.140
+[jenkins-slave:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=/opt/talachavi.pem
+
+ansible all -i hosts -m ping
+
+Lec27(Writing ansible playbook to install jenkins)-------------------------------------------------------------------------
+cd /opt
+
+vi jenkins-master.yml
+---
+- hosts: jenkins-master
+  become: true
+  tasks: 
+   - name: Adding Jenkins key
+     apt_key: 
+      url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+      state: present
+
+   - name: Adding Jenkins Repo
+     apt_repository: 
+      repo:  deb https://pkg.jenkins.io/debian-stable binary/
+      state: present
+
+   - name: Installing Java
+     apt: 
+      name: openjdk-11-jre
+      state: present
+
+   - name: Install Jenkins
+     apt: 
+      name: jenkins
+      state: present
+
+   - name: Starting Jenkins Service
+     service: 
+      name: jenkins
+      state: started
+
+   - name: Enabling Jenkins Service at boot time
+     service: 
+      name: jenkins
+      enabled: yes
+...
+
+
+ansible-playbook -i hosts jenkins-master.yml --syntax-check
+
+ansible-playbook -i hosts jenkins-master.yml --check
+
+ansible-playbook -i hosts jenkins-master.yml 
+
+access the jenkins through GUI 
+
+https://13.201.32.56:8080
+
+cat /var/lib/jenkins/secrets/initialAdminPassword
+
+lec30(Writing Ansible playbook to install Maven on jenkins-slave)-----------------------------------------------------------
+vi jenkins-slave.yml
+---
+- hosts: jenkins-slave
+  become: true
+  tasks: 
+  - name: Updating the Ubuntu Machine
+    apt: 
+      update_cache: yes
+      force_apt_get: yes
+      cache_valid_time: 3600
+  - name: Installing Java
+    apt: 
+      name: openjdk-11-jre
+      state: present
+  - name: Downloading maven packages
+    get_url: 
+     url: https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz
+     dest: /opt
+  - name: Untaring the maven package
+    unarchive:
+     src: /opt/apache-maven-3.9.6-bin.tar.gz
+     dest: /opt
+     remote_src: yes
+  - name: 
+    apt: 
+     name: maven
+     state: present
+     
+ansible-playbook -i hosts jenkins-slave.yml
+
+-------------------------------------------------Jenkins-------------------------------------------------------------------
+Lec34(Adding jenkins master and slave configuration)
+Adding credentials to jenkins 
+Manage jenkins --> security --> credentials -->system--> global credentials (unrestricted) --> add credentials
+kind:ssh username with private key
+scope: default
+ID:maven-server-cred
+private : enter directly 
+
+
+Lec35(Adding build node to jenkins server {maven server})------------------------------------------------------------------
+Manage jenkins --> Nodes --> New node --> Permanent Agent
+Provide the below info to add the node
+Number of executors: 3
+Remote root directory: /home/ubuntu/jenkins
+Labels: maven
+Usage: Use this node as much as possible
+Launch method: Launch agents via SSH
+Host: <Private_IP_of_Slave>
+Credentials: <Jenkins_Slave_Credentials>
+Host Key Verification Strategy: Non verifying Verification Strategy
+Availability: Keep this agent online as much as possible
+
+Run a job to check if the jennkins slave is working 
+general:Restrict where this project can be run:label expression:maven
+
+lec36(Writing first jenkins pipeline job )---------------------------------------------------------------------------------
+New-item -->Name (demo-pipelin-job) --> pipeline --> add below pipeline in project 
+pipeline {
+    agent {
+        node {
+            label 'maven'
+        }
+    }
+
+    stages {
+        stage('Hello') {
+            steps {
+                git branch: 'main', url: 'https://github.com/TohitShaikh/tweet-trend-new.git'
+            }
+        }
+    }
+}
+
+Run the job
+Lec37(Creating Jenkinsfile)------------------------------------------------------------------------------------------------
+Clone the repo at /c/Users/admin/Documents/devops-project-folder
+
+git clone https://github.com/TohitShaikh/tweet-trend-new.git
+
+git add Jenkinfile
+git commit -m "first commiy to repo"
+git push origin main
+
+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  ---->Github token
+
+After pushing the code to the github change the pepilline script to pipeline script from scm and run the job and observe 
+on the logs thatcode is being pushed by git scm
+
+Lec39(generating github credential)-----------------------------------------------------------------------------------------
+Generate github credential using token
+
+Lec40(Setup multibranch pipeline)-------------------------------------------------------------------------------------------
+Create branches in the github and craete a job in jenkins and craete the job with multibranch-pipeline 
+
+Lec41(Enabling github webhook)-----------------------------------------------------------------------------------------------
+Install "multibranch scan webhook trigger" plugin
+From dashboard --> manage jenkins --> manage plugins --> Available Plugins
+Search for "Multibranch Scan webhook Trigger" plugin and install it.
+
+Go to multibranch pipeline job job --> configure --> Scan Multibranch Pipeline Triggers --> Scan Multibranch Pipeline Triggers 
+--> Scan by webhook
+Trigger token: multibranch-token
+
+Add webhook to GitHub repository Github repo --> settings --> webhooks --> Add webhook
+Payload URl: http://65.0.168.142:8080/multibranch-webhook-trigger/invoke?token=multibranch-token
+Content type: application/json
+Which event would you like to trigger this webhook: just the push event
+
+Once it is enabled make changes to source to trigger the build
+
+Lec43(Setting up sonarqube/sonarcloud)-----------------------------------------------------------------------------------------
+
+## SonarQube Configuration 
+
+1. Create Sonar cloud account on https://sonarcloud.io
+2. Generate an Authentication token on SonarQube
+    Account --> my account --> Security --> Generate Tokens 
+
+3. On Jenkins create credentials 
+   Manage Jenkins --> manage credentials --> system --> Global credentials --> add credentials
+ - Credentials type: `Secret text`
+ - secret : 8e07c6d328fe2652ae873f5bea1ce0a12ddc8537
+ - ID: `sonarqube-key`
+
+4. Install SonarQube plugin
+    Manage Jenkins --> Available plugins 
+    Search for `sonarqube scanner`
+
+5. Configure sonarqube server 
+   Manage Jenkins --> Configure System --> sonarqube server 
+   Add Sonarqube server 
+   - Name: `sonar-server`
+   - Server URL: `https://sonarcloud.io/`
+   - Server authentication token: `sonarqube-key`
+
+6. Configure sonarqube scanner 
+   Manage Jenkins --> Global Tool configuration --> Sonarqube scanner 
+   Add sonarqube scanner 
+   - Sonarqube scanner: `sonar-scanner`
+
+8e07c6d328fe2652ae873f5bea1ce0a12ddc8537 ---->Sonarcloud token
+
+Lec45(Creating sonarqube properties file)-----------------------------------------------------------------------------
+Creating sonar properties file we need to create a organization under soanrcloud after creating organization we need to 
+create project under organization
+sonarcloud dashboard --> my account --> organizations --> create org
+name: devops-org1
+key: devops-org1-key
+
+Analiyze new project 
+name: devops-project
+projectkey: devops-org1-key_devops-project
+
+Craete sonar-propertiesfile in the github account under our src repo 
+sonar.verbose=true
+sonar.organization=devops-org1-key
+sonar.projectKey=devops-org1-key_devops-project
+sonar.projectName=devops-project
+sonar.language=java
+sonar.sourceEncoding=UTF-8
+sonar.sources=.
+sonar.java.binaries=target/classes
+sonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+git add sonar-project.properties
+ git commit -m "sonar-project.properties uploading repo"
+git push origin main
+ 
+Lec46(Adding SonarQube stage to Jenkinsfile)---------------------------------------------------------------------------
+
+Beforing adding sonarqube stage we need to update the webhook ip as we have stopped and started it the ip will change
+
+http://13.234.113.250:8080/multibranch-webhook-trigger/invoke?token=multibranch-token
+
+pipeline {
+    agent {
+        node {
+            label 'maven'
+        }
+    }
+
+    stages {
+        stage('Checkout-Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/TohitShaikh/tweet-trend-new.git'
+            }
+        }
+        
+        stage('Build-Stage') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        
+        stage('SonarQube analysis') {
+            environment {
+                scannerHome = tool 'sonarqube-scanner'
+            }
+            steps {
+                    withSonarQubeEnv('sonarqube-server') {
+                        sh "${scannerHome}/bin/sonar-scanner"
+                    }
+                }
+            }
+        }
+    }
+
+
+ and observing in the sonarqube for the reports 
+
+Lec47(Adding unit test cases stage in jenkins file)-----------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+ 
