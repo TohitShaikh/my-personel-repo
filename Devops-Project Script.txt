@@ -425,24 +425,4 @@ pipeline {
  and observing in the sonarqube for the reports 
 
 Lec47(Adding unit test cases stage in jenkins file)-----------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
  
