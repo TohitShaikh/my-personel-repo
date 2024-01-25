@@ -1,4 +1,4 @@
-lec4-----------------------------------------------------------------------------------------------------------------------
+--lec4-----------------------------------------------------------------------------------------------------------------------
 Tools to be installed 
 VScode , git , aws cli , terraform , mobaxtream
 
@@ -593,4 +593,82 @@ git commit -m "Updated with Artifact stage"
 git push origin main
 
 Observe in the jfrog your jar file will be publish there
+------------------------------------------------------docker--------------------------------------------------------------
+Lec56(Docker setup using ansible)-----------------------------------------------------------------------------------------
+Update the jenkins-slave.yml add docker installation configuration
+
+vi jenkins-slave.yml
+---
+- hosts: jenkins-slave
+  become: true
+  tasks: 
+  - name: Updating the Ubuntu Machine
+    apt: 
+      update_cache: yes
+      force_apt_get: yes
+      cache_valid_time: 3600
+  - name: Installing Java
+    apt: 
+      name: openjdk-17-jdk
+      state: present
+  - name: Downloading maven packages
+    get_url: 
+     url: https://dlcdn.apache.org/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz
+     dest: /opt
+  - name: Untaring the maven package
+    unarchive:
+     src: /opt/apache-maven-3.9.6-bin.tar.gz
+     dest: /opt
+     remote_src: yes
+  - name: 
+    apt: 
+     name: maven
+     state: present
+  - name: Docker Installation
+    apt: 
+     name: docker.io
+     state: present
+  - name: Starting docker service
+    service: 
+     name: docker
+     state: started      
+     
+Connect to the ansible m/c and update the configuration and run the playbook
+
+ansible-playbook -i hosts jenkins-slave.yml
+
+Connect to the jenkins slave m/c and observe that docker will be instaled there
+
+docker --version
+
+Lec60(Writing dockerfile)-------------------------------------------------------------------------------------------------
+Source Code section and Dockerfile
+
+vi Dockerfile
+FROM openjdk:8
+ADD jarstaging/com/valaxy/demo-workshop/2.1.2/demo-workshop-2.1.2.jar ttrend.jar
+ENTRYPOINT ["java","-jar","ttrend.jar"]
+
+git status
+git add Dockerfile
+git commit -m "Dockerfile commit"
+git push origin main
+
+Lec58(Creating docker repository in the Jfrog)-----------------------------------------------------------------------------
+Create docker repo in JFrog
+JFrog dashboard --> user menu --> Quick Repository Creation --> name devops --> create	
+
+Install docker pipeline plugin in jenkins machine
+
+
+
+
+
+ 
+
+
+
+
+
+ 
  
