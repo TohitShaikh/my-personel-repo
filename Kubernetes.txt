@@ -15,7 +15,7 @@ swapoff -a
 sed -i / 'swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
 3#Install packages. To install Kubernetes and containerd run these commands
-apt update -y
+sudo apt update && sudo apt upgrade -y
 
 sudo apt-get install -y apt-transport-https ca-certificates curl gpg
 
@@ -95,7 +95,7 @@ kubectl get pods -n kube-system -o wide
 
 kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
 
-kubectl get nodes
+/
 
 kubectl get pods --all-namespaces
 
@@ -109,7 +109,7 @@ Lec3----------------------------------------------------------------------------
 kubectl get namespace
 
 vi test-ns.yml
-api-Version: v1
+apiVersion: v1
 kind:  Namespace
 metadata: 
  name: test-ns
@@ -124,7 +124,114 @@ kubectl get namespace
 
 kubectl get all --all-namespaces
 
+Lec4(PODS)----------------------------------------------------------------------------------------------------------------
+vi Pods.yml 
+
+apiVersion: v1
+kind: Pod
+metadata: 
+ name: <podname>
+ namespace: <namespace-name>
+ labels: 
+   key: value
+spec: 
+ container: 
+ - name: <container-name>
+   image: <imageName>
+   ports: 
+   - containerPort: <containerPort>
+
+kubectl apply -f Pod.yml --dry-run=client
+
+kubectl get pods -n test-ns
+
+kubectl describe pods maven-webapp-pod  ---> it will show error because bt default it will search the pod in the default 
+                                               namespace
+
+kubectl describe pods maven-webapp-pod -n test-ns
+
+kubectl delete pod  maven-webapp-pod
+
+Lec5(Service)-------------------------------------------------------------------------------------------------------------
+vi service.yml
+
+apiVersion: v1
+kind: Service
+metadata:  
+  name: <service-name>
+  namespace: <ns-name>
+spec: 
+ type: <ClusterIP/NodePort/Loadbalncer>
+ selector:                         #Pod Label as selector	
+   <Pod-label-key>: <Pod-label-value>
+ ports: 
+ - port: <Service-Port>  #On which port the service should accept the traffic
+   targetPort: <Container-Port>
 
 
+kubectl apply -f service.yml 
+
+kubectl describe svc -n test-ns
+
+#To get the Information of labels attached to the pod
+
+kubectl get pods --show-labels -n test-ns
+
+#T check if the srvice which we have attached to the pod is working or not
+curl -v <serviceip>:<port>/maven-web-application/
+
+Take the ip of your service and access the pod  from the worker node 
+#Create a nodejs pod 
+vi nodejs.yml
+apiVersion: v1
+kind: Pod
+metadata: 
+ name: nodejs-pod
+ namespace: test-ns
+ labels: 
+   app: nodeapp
+spec: 
+ containers: 
+  - name: node-app-container
+    image: dockerhandson/node-app-mss:1
+    ports: 
+      - containerPort: 9981
+       
+kubectl apply -f nodejs.yml
+
+kubectl get all -n test-ns  
+#to connect to the container inside the pod
+kubectl exec -it nodejs-pod -n test-ns -- sh
+
+#Craeting a nodeport service to access the applicatiion from outside the cluster
+vi nodeport-service.yml
 
 
+apiVersion: v1
+kind: Service
+metadata:   
+ name: maven-webapp-service
+ namespace: test-ns
+spec: 
+ type: NodePort
+ selector: 
+  app: maven-web-app
+ ports: 
+ - port: 80
+   targetPort: 8080
+    
+kubectl apply -f nodeport-service.yml 
+
+kubectl get all -n test-ns
+output -->
+NAME                   READY   STATUS    RESTARTS      AGE
+pod/maven-webapp-pod   1/1     Running   1 (55m ago)   21h
+pod/nodejs-pod         1/1     Running   0             20m
+
+NAME                           TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+service/maven-webapp-service   NodePort   10.106.232.132   <none>        80:30972/TCP   21h
+
+
+take the server ip and access the conatiner ising the nodeport port
+
+http://65.2.130.87:30972/maven-web-application/
