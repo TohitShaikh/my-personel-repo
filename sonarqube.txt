@@ -1,0 +1,137 @@
+####################################SONARQUBE INSTALLATION############################################
+
+#Launch an ec2 machine of rhel linux and with 2GB ram && connect to putty 
+
+sudo su -
+
+yum update -y 
+
+cd /opt
+
+yum install wget -y 
+
+yum install unzip -y
+
+wget https://download.oracle.com/java/17/latest/jdk-17_linux-x64_bin.tar.gz
+
+tar -xvzf jdk-17_linux-x64_bin.tar.gz
+
+wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-9.9.3.79811.zip
+
+unzip sonarqube-9.9.3.79811.zip
+
+cd
+
+vi .bash_profile ------>Paste the below line in .bash_profile to set the environment.
+
+JAVA_HOME='/opt/jdk-17.0.9/bin/java'
+PATH="$JAVA_HOME/bin:$PATH"
+export PATH=/opt/jdk-17.0.9/bin:$PATH
+
+export SONAR_JAVA_PATH=/opt/jdk-17.0.9/bin/java
+
+source .bash_profile
+
+which java
+
+useradd sonar 
+
+passwd sonar
+
+sonar   ALL=(ALL)  ALL  <---add this line in visudo---> visudo 
+
+chown -R sonar:sonar /opt/sonarqube-9.9.3.79811
+
+chmod -R 775 /opt/sonarqube-9.9.3.79811
+
+su sonar -  
+
+#Run the sonar.sh with new user created 
+
+cd /opt/sonarqube-9.9.3.79811/bin/linux-x86-64/
+
+sh sonar.sh start
+
+sh sonar.sh status
+
+curl ifconfig.me
+
+take the public ip of instance and access the sonarqube with the web browser the port no is 9000
+
+usename-admin 
+password-admin          -------->The defult password of Sonarqube
+
+Connect to the maven machine and we will further work with maven 
+
+http://13.232.196.42:9000/	---------> Paste the url of SONAR m/c  in the maven-web-application-pom.xml in the propertise tags 
+
+admin && <pasword which you have given to sonarqube>
+
+##Instead of giving password generate a token it is the best practice 
+
+SonarQubedashboard --->Administrator--->user-->genratetoken
+
+squ_c997dbe1ab75bfdaffb277da5cb0de5256e4bd67  ------>Sonarqube generated token
+ 	                                      ------>Paste this token in <sonar.login> tags and delete the paswword tags
+
+##Save the Generated token in the below format in the pm.xml
+
+<sonar.host.url>http://52.66.209.134:9000/</sonar.host.url>
+<sonar.login>squ_830689d7dce0fe7d079f416f362698c57daf6681</sonar.login>
+
+mvn sonar:sonar    ------->Command to generate sonarqube report 
+      |       |
+      |       |
+Plugin Name Goal Nme 
+
+###After running the above command go to dashboard and view in the gui 
+
+###Assignment for 3 java project execute the sonarqube report Configure the sonar host url and token in below format in the pom.xml.
+<sonar.host.url>http://52.66.209.134:9000/</sonar.host.url>
+<sonar.login>squ_830689d7dce0fe7d079f416f362698c57daf6681</sonar.login>
+
+##Quality profile - Collection of rule which are we going to apply in executing sonarqube report 
+
+Sonarqube Dashboard --> Quality Profile --> Create --> Quality profile Get Created -->  In left Left side click activate more to add rule --> After selecting the rule for java directlt click on Quality Profile -->  Search javavour custom quality profile will be created -->Select custom and click on setting icon --> set as default
+
+##Not for every project but For specfic java project we want to set quality profile  
+
+Sonarqube Dashboard --> Project --> Select project --> On right side Project settings --> Select 2nd Option and select custom profile which we have created
+
+##After That connect to cli and execute a sonarqube report and observe that only selected rule in the custom profile will be executed.
+
+##On Which basis it will mark that our Priject is fial or pass ??  --------On the basis of 
+Quality Gates- Collection of condition which we are going to apply while executing sonarqube report 
+             -Accoeding to development team we will add n number of comditions.
+Applying quality Gates 
+Soanrqube dashboard --> Project --> Select Project --> On right side Project settings --> Quality Gates --> Select 2nd Option and select custom profile which we have created 	
+
+#In Organization how we will provide access to developer bt creating multiple user 
+Sonarqube dashboard --> security & user --> Create user --> fill the details --> Save and Logout and login with the new user created and observe that administrator tab will not be there.
+
+#Adding user to admin group or our custom group
+
+Sonarqube dashboard --> security & user -->  select Group icon and add user to group
+
+######################TroubleShooting Point of Sonarqube server###############################################
+sonar service is not starting?
+
+a)make sure you need to change the ownership and group to /opt/sonarqube-7.6/ directory for sonar user.
+
+b)make sure you are trying to start sonar service with sonar user.
+
+c)check java is installed or not using java -version command.
+
+dRemoved stale pid file: ./SonarQube.pid
+SonarQube is not running.           ----------------If this error is showing use this command to resolve the essue
+                                                         (sudo rm -rf /opt/sonarqube-9.9.3.79811/temp)
+
+
+Unable to access SonarQube server URL in browser?
+
+a)make sure port 9000 is opened in security groups AWS ec2 instance.
+
+Create SonarQube server as a sonar service
+
+###################################################################################################################
+

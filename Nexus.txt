@@ -1,0 +1,186 @@
+#Nexus Installation 
+Lauch an ec2 instance with instance type t2.medium with 2vcpu and 4GBRam 
+
+Lec1 
+sudo su -
+
+vi /etc/hostname ------->Delete the previous hostname and add the New name to the m/c with hostname NEXUS.
+
+yum install wget -y 
+
+yum install java-1.8.0-openjdk -y
+
+JAVA_HOME='/usr/bin/java'
+PATH="$JAVA_HOME/bin:$PATH"
+export PATH=/usr/bin/java:$PATH
+
+java --version 
+
+wget https://download.sonatype.com/nexus/3/nexus-3.63.0-01-unix.tar.gz
+
+tar -xvzf nexus-3.63.0-01-unix.tar.gz  ----->After untaring the nexus a "sonatype-work" directory will be created.
+ 
+mv nexus-3.63.0-01 nexus 
+
+useradd nexus 
+
+passwd nexus  -------->Create passwd for the user
+
+nexus   ALL=(ALL)  NOPASSWD: ALL  <---add this line in visudo---> visudo
+
+sudo su nexus -
+pwd # cheacking the directory 
+chown -R nexus:nexus /opt/nexus
+
+chown -R nexus:nexus /opt/sonatype-work
+
+chmod -R 775 /opt/nexus
+
+chmod -R 775 /opt/sonatype-work
+
+vi /opt/nexus/bin/nexus.rc   ------>Remove the # comment from the line and write nexus b/w the double inverted comma.
+run_as_user="nexus"
+
+ln -s /opt/nexus/bin/nexus /etc/init.d/nexus
+
+sudo systemctl enable nexus
+sudo systemctl start nexus
+sudo systemctl status nexus
+
+cd /opt/nexus/bin
+
+sh nexus start 
+
+Take the public ip of the machine and access it using browser with port no. 8081
+
+http://3.111.188.124:8081
+
+SignIn to nexus repo using the credential which is located in the below file. 
+Your admin user password is located in
+/opt/sonatype-work/nexus3/admin.password on the server.
+
+c80bcc23-8b38-4df2-8cd2-301ca2f45b30  ------>Password at first login 
+
+Create a new password at and Enable anonyoums user 
+
+lec2 
+#########If we want to change the port no. of nexus and change the context path 
+
+cd /opt/nexus/etc
+
+vi nexus-default.properties    ---------->Change the port no && context path.
+application-port=8081   -------> application-port=9999
+nexus-context-path=/    ------->nexus-context-path=/Tohitshaikh    ----->After changing the nexus-default.properties restart the nexus service
+
+cd /opt/nexus/bin
+
+sh nexus restart
+
+sh nexus start
+
+##On Nexus GUI 
+After that restart the nexus web page & it wil not work becuse we have change the portn. & contextpath
+http://13.234.17.43:9980/Tohitshaikh
+
+Custom repo 1)Nexus --> setting icon --> repositories --> create repositories --> select Maven2 (Hosted) --> Repo name - facebook-snapshot -->Change Version policy release to snapshot --> leave everthing as default --> create repository 
+
+##Creating Our Own Custom Repositories 
+Custom repo2)create repositories --> select Maven2 (Hosted) --> Repo name - facebook-release--> leave everthing as default --> create repository
+
+##Copy the Url of both cusutom repositories 
+
+http://13.126.50.25:8081/repository/facebook-snapshot/
+
+http://13.126.50.25:8081/repository/facebook-release/
+
+
+####This above 2 URL we will configure in the pom.xml in the <distributionManagement> tags && for our project..
+
+##Connect to the Maven M/C 
+
+vi /root/maven-web-application/pom.xml  --->Locate The <distributionManagement> tag and do the changes in the pom.xml
+
+Paste below url in the Facebook Releases Nexus Repository CAREFULLY
+http://13.233.122.200:9980/Tohitshaikh/repository/facebook-release/
+
+Paste below url in the >Facebook Snapshot Nexus Repository CAREFULLY
+http://13.233.122.200:9980/Tohitshaikh/repository/facebook-snapshot/
+
+##We will Configure Nexus Credentials in settings.xml using below fromat 
+ 
+vi /root/apache-maven-3.9.5/conf/settings.xml  ---->Configure the below format into settings.xml on line no 134.
+
+<id>nexus</id>   ----->This name should be same in the Pom.xml and Setting.xml
+
+
+     <server>
+       <id>nexus</id>   
+       <username>admin</username>
+       <password>Tohit8390#</password>
+     </server>
+
+
+cd /root/maven-web-application
+
+mvn clean deploy 
+
+##After RUnning the above command Observe that on GUI in the snapshot folder packes will be avialble there
+
+Releases Repository -->Deploying package on the production relases repository will be used./ Releases Repository contains the production level package
+Snapshot Repository -->On going develpment package are going to be stored inthe snapshot repository./Snapshot Repository contains the on going development packages.
+
+##Error code Solution 
+
+403 --> check user permission
+
+401 --> Check the credentials 
+
+##If you want to upload the package in the Release Repository You need to change the version in the pom.xml on line no.8 becauce if it conatains the "snapshot" keyword it will upload on the snapshot after changing the version  it will upload in the relases repository.
+
+vi /root/maven-web-application/pom.xml --> Change the version tag given as below 
+         Before                                  After
+<version>0.0.1-SNAPSHOT</version> -------> <version>1.0.0</version>
+
+##After executing above command veiw in the facbook release repo .
+
+##After Uploading the relaese version in the repository. after that you will not able to upload/rewrite the current version untill you change the version.
+
+##After uploading the package on repository we realised that we have a small change in the the code how we will upload it 
+ 
+Solution for up given problem 
+Nexus dashboard --> Server administrator tab (Setting icon) --> repository --> select the releases repositories --> Navigate deployment policy --> select "Allow redeploy" -->save it It will allow you to overwrite the version.
+             After uploading the package change the deployment policy to "Disable redeploy" .
+
+#We will create our own Remote Repository in the nexus where we will store the jar files etc and it is only for used in our organization only
+Nexus dashboard --> Server administrator tab (Setting icon) --> repository --> select Maven2 (Hosted) --> Give Name for repositories (remote-repositories) --> change the version policy to mixed --> save 
+
+##Proxy 
+
+#in organization we will not directly connect to the central repository so first we will create a proxy repository because downoloading from the internet it may contain some virus so we will cinfigure the proxy repo on of the servr or in the which we have creted and install there Anti-virus . And by using proxy we will communicate with the central repositories
+
+##Creating Proxy repositories 
+Nexus dashboard --> Server administrator tab (Setting icon) --> repository --> Create repositories --> Select Maven2 (proxy) --> Name of the repo(Proxy Repo) --> Select version policy (Mixed) -->Remote storage --> Paste there Central Repositories Url It will be available there only --> Leave everything as default --> Save 
+
+Copy the url of the proxy repo and paste it into the Pom.xml and setting.xml 
+
+http://13.233.158.15:9980/Tohitshaikh/repository/Proxy-repo/
+
+#We will paste the below proxy repo  in pom.xml on line no 30 && In setting.xml on loine no. 171
+<repositories>
+         <repository>
+            <id>nexus</id>
+            <name>Proxy Repo </name>
+            <url>http://13.233.158.15:9980/Tohitshaikh/repository/Proxy-repo/</url>
+         </repository>
+</repositories>
+
+cd /root/mvnlocalrepo --->Delete some dependencies from the mvn localrepo
+
+mvn package --> it will download 
+
+
+
+
+
+
+

@@ -1,0 +1,177 @@
+        
+                             
+                            **********  MAVEN INSTALLATION   ***********
+
+ 
+
+    # 4gb.RAM required for maven installation & prerequisit is java (open or oracle, IBM not suppoeted.)
+
+   sudo su - 
+   
+   yu update -y 
+
+  yum install wget -y 
+  
+  wget https://download.oracle.com/java/17/latest/jdk-17_linux-x64_bin.rpm
+
+  rpm -Uv jdk-17_linux-x64_bin.rpm
+
+  java --version
+
+  wget https://dlcdn.apache.org/maven/maven-3/3.9.5/binaries/apache-maven-3.9.5-bin.tar.gz
+
+  ls
+
+  tar -zxvf  apache-maven-3.9.5-bin.tar.gz
+
+  mvn -version
+
+  readlink -f $(which java)  <------(take a path of java)
+
+
+  cd apache-maven-3.9.5
+
+  pwd   (take a path of maven)
+
+  vi .bash_profile
+
+JAVA_HOME='/usr/lib/jvm/jdk-17-oracle-x64/bin/java'
+PATH="$JAVA_HOME/bin:$PATH"
+export PATH
+
+  M2_HOME='/root/apache-maven-3.9.5'
+  PATH="$M2_HOME/bin:$PATH"
+  export PATH
+
+  
+
+  source .bash_profile
+   
+   mvn -version
+   
+
+   sudo yum install git -y
+
+   git clone https://github.com/MithunTechnologiesDevOps/maven-standalone-application.git
+
+
+   mvn package                <------ you get error so first you have to go in maven-standalone-application
+
+
+   cd maven-standalone-application
+
+
+   mvn package                <------ first time it take time to download artifactories  from central
+
+
+   ls                         <--------- then u see target directoty 
+
+
+   cd target                 ( It is the default output directory where Maven places the build artifacts during the build process.
+                               It contains compiled classes (*.class files), packaged artifacts (JAR, WAR, etc.).
+
+   
+
+   mvn clean package          <----it clean old one and take new artifactories
+   
+
+   mvn clean 
+
+
+
+
+   ls -a
+
+   cd .m2    <-------------in .m2 u found repository
+
+ NOTE:
+    The target directory is specific to each Maven project and holds the output of the build process, while the .m2 directory is a global repository on the user's system where Maven stores downloaded dependencies needed for building various projects. 
+  
+
+    settings.xml   (have to find where is this)
+
+#Changing Maven's Default path to Custom path 
+ 
+ mkdir mvnlocalrepo ------------------> We will use this direcctory as Custom repository
+
+ cd mvnlocalrepo 
+
+ pwd    ----------> Take the path of the directory and paste the path with below tag in the SETTING.XML to use the directory as a LOCAL REPO.
+
+<localRepository>/root/mvnlocalrepo/</localRepository>
+
+ vi /root/apache-maven-3.9.5/conf/settings.xml  --------> Path for setting.xml.
+
+  cd /root/maven-standalone-application
+
+ mvn clean package  ----> run this check if that maven is using our's custom repository 
+
+ cd mvnlocalrepo 
+
+ mvn clean package -DskipTests --->It wil compile the code and skip the unit test cases
+
+ mvn clean package -Dmaven.test.skip=true ----> It wil skip the compile and skip the unit test cases.
+ 
+ mvn clean install    ------->It will store the build file in the local repo inside the  "com" directory .
+
+  cd /root/mvnlocalrepo/com  -------> After running the above command observe in the com directory "mt" directory will be created .
+
+  cd /root/mvnlocalrepo/com/mt/maven-standalone-application/0.0.1-SNAPSHOT  ------> Here will be the build file store 
+
+ git clone https://github.com/TohitShaikh/maven-web-application.git   -------->Downloading the Maven Web Application from github repo
+
+ cd maven-web-application/ 
+
+ mvn clean package  
+
+ git clone https://github.com/TohitShaikh/maven-enterprise-application.git  ----------> downloading the enterprise application 
+
+ cd maven-enterprise-application
+
+ mvn clean package 
+
+ mvn clean package -pl MavenEnterpriseApp-web   ------->We have multiple module in the pom.xml if we want to run specific module 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
