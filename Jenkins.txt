@@ -44,7 +44,7 @@ jenkins Dashboard --> Manage Jenkins --> tools --> scrol down navigate maven -->
 #As we have downloaded two version of maven so which maven to use we have to define it 
 jenkins Dashboard --> Select the job --> Configure --> Build Environment --> select version of maven which we want to use --> build the job and
                                                  ___________________________________________________________________ 
-iew console output The Job will be stored in the |var/lib/jenkins/workspace/facebook-dev/target/maven-web-application| location
+view console output The Job will be stored in the |var/lib/jenkins/workspace/facebook-dev/target/maven-web-application| location
                                                  |this the default path _____________________________________________________|
 
 ##After that we will generate report to sonarqube&& configure the sonarqube m/c ip address and token in the pom.xml and commit the changes come to jenkins dashboard and execute sonar qube report 
