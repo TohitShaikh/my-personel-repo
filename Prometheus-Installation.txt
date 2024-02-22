@@ -1,0 +1,65 @@
+#Create a system user for Prometheus using below commands:
+sudo useradd --no-create-home --shell /bin/false prometheus
+
+#Create the directories in which we will be storing our configuration files and libraries with this commands:
+sudo mkdir /etc/prometheus
+sudo mkdir /var/lib/prometheus
+
+#Set the ownership of the /var/lib/prometheus directory with below command:
+sudo chown prometheus:prometheus /var/lib/prometheus
+
+#You need to inside /tmp :
+cd /tmp/
+
+#Download the prometheus from official documentation & Untar it 
+https://prometheus.io/download/
+
+wget https://github.com/prometheus/prometheus/releases/download/v2.45.3/prometheus-2.45.3.linux-amd64.tar.gz
+
+tar -xvf prometheus-2.45.3.linux-amd64.tar.gz
+
+cd prometheus-2.45.3.linux-amd64
+
+#Move the configuration file and set the owner to the prometheus user:
+sudo mv console* /etc/prometheus
+sudo mv prometheus.yml /etc/prometheus
+sudo chown -R prometheus:prometheus /etc/prometheus
+
+#Move the binaries and set the owner:
+sudo mv prometheus /usr/local/bin/
+sudo chown prometheus:prometheus /usr/local/bin/prometheus
+
+#Create the prometheus service file using below command:
+sudo nano /etc/systemd/system/prometheus.service
+
+[Unit]
+Description=Prometheus
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+ExecStart=/usr/local/bin/prometheus \
+    --config.file /etc/prometheus/prometheus.yml \
+    --storage.tsdb.path /var/lib/prometheus/ \
+    --web.console.templates=/etc/prometheus/consoles \
+    --web.console.libraries=/etc/prometheus/console_libraries
+
+[Install]
+WantedBy=multi-user.target
+
+#Reload systemd using below command:
+sudo systemctl daemon-reload
+
+#Enable Prometheus service using below commands:
+sudo systemctl enable prometheus
+
+#Start Prometheus service using below commands:
+sudo systemctl start prometheus
+
+#Take public ip of promethteus server and access it with web browser
+curl ifconfig.io
+
+http://65.2.184.128:9090
