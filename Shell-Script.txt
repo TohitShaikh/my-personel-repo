@@ -1,0 +1,120 @@
+#Lauch an ec2 intance 
+
+vi hello.sh
+#!/bin/sh
+echo "Hello everyone"
+echo "GM/GA/GN"
+echo "Today date is"
+date
+echo "Welcome Everyone"
+
+#Givng execute permission 
+chmod u+x hello.sh
+
+#To run the shell script in debug mode to detect the error
+sh -x hello.sh
+
+#For running specific line in debug mode 
+vi hello.sh
+#!/bin/sh
+echo "Hello everyone"
+set -x
+echo "GM/GA/GN"
+set +x
+echo "Today date is"
+date
+echo "Welcome Everyone"
+
+sh hello.sh
+
+#Comments
+vi comments
+echo "Comments demo"
+echo "Two types of comment"
+echo "S L C starts"
+#echo "This line is commented"
+echo "M L C starts"
+<<multi-line-example
+date
+cal
+hostname
+multi-line-example
+echo "Demo Over"
+
+sh comments
+
+#Variables 
+vi variable-demo.sh
+#!/bin/bash
+a=10
+b=20
+name=loudAge
+c=30
+
+echo "The Variable value of a is: $a"
+echo "The Variable value of b is: $b"
+echo "The Variable value of name is: $name"
+echo "The Variable value of c is: $ac"
+#Using SYSTEM Define Variable
+echo "The user name is: $USER"
+echo "The current shell is: $SHELL"
+
+sh variable-demo.sh
+
+#Command Line Arguments 
+vi cmd-argument.sh
+#!/bin/bash
+echo "Command Line Arguments Demo"
+echo "Script file name" $0
+echo "First Argument" $1
+echo "Second Argument" $2
+echo "Third Argument" $3
+echo "10th Argument" $10
+echo "Number of Arguments" $#
+echo "All the Argument" $*
+echo "All the Argument" $@
+echo "PID" $$
+date
+echo "Previous cmd execution status" $?
+
+sh cmd-argument.sh  ----> It will not show any arg untill we dynamically pass the value
+
+sh cmd-aruments.sh CloudAge DevOps Cloud  ---> To Recover the value of arguments we need to pass the argument dynamically
+
+#We are passing conditions{if & Else} if the number of arg not equall to the number 
+#which we have specified in the if condition the shell script will not run
+
+
+if [ $# -eq 2 ]
+then
+echo "Command Line Arguments Demo"
+echo "Script file name" $0
+echo "First Argument" $1
+echo "Second Argument" $2
+echo "Third Argument" $3
+echo "10th Argument" $10
+echo "Number of Arguments" $#
+echo "All the Argument" $*
+echo "All the Argument" $@
+echo "PID" $$
+date
+echo "Previous cmd execution status" $?
+else 
+echo "you should pass the 2  arg"
+echo "Usage: sh $0 CloudAge DevOps"
+fi
+
+sh cmd-argument.sh   ----> I you run this command it will show error to pass atleast 2 arguments
+
+#We can use multiple option in below command
+if [ $# -eq 2 ]
+
+-eq (Equals to)
+-ne (Not Equal)
+-lt (less than)
+-le (Less thann or Equals to)
+-gt (Greater than)
+-ge (Greater than or Equals to)
+
+
+
