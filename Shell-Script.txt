@@ -117,4 +117,225 @@ if [ $# -eq 2 ]
 -ge (Greater than or Equals to)
 
 
+#String 
 
+vi string.sh
+string_var="Hi Team, My name is Tohit Shaikh, Working In All Ops, In Kondhwa"
+echo $string_var
+echo ${string_var}
+echo $#{string_var}
+echo ${string_var:20}
+echo ${string_var:20:14}
+echo ${string_var: -8}
+
+
+##Assignment 
+Write  a shellscript to accept 2 numbers from the user and perform the ar op
+
+echo "Adding first two numbers dynamically: " `expr $1 + $2`
+
+##Youtbe------------------------------------------------------------------------------------------------------------------
+#Arrays 
+vi arrays.sh
+#!/bin/bash
+myArray=(1 20 30.5 hello "Hey Buddy")
+
+#To take the value of specific index number
+echo "Value of index number is ${myArray[3]}"
+
+#To take the all the values from the array's
+echo "Value of all array's are ${myArray[*]}"
+
+#To Find no. of value in array
+echo "Total no. of value in array are ${#myArray[*]}"
+
+#To get 2nd and 3rd value from an array
+echo "The 2nd and 3rd value from an array are ${myArray[*]:2:2}"
+
+#How to update/add new array 
+myArray+=(new 60 90)
+
+echo "Values of new array are ${myArray[*]}"
+
+#How to store values in key-value pairs
+
+declare -A myarray
+myarray=( [name]=Tohit [age]=19 [city]=pune )
+echo "My Name is ${myarray[name]}"
+echo "My Age is ${myarray[age]}"
+echo "My live in ${myarray[city]}"
+
+#String Operations
+
+vi string_ops.sh
+string_var="Hi Team, My name is Tohit Shaikh, Working In All Ops, In Kondhwa"
+echo $string_var
+echo ${string_var}
+echo ${#string_var}
+echo ${string_var:20}
+echo ${string_var:20:14}
+echo ${string_var: -8}
+
+#User Interaction 
+vi user_interactio.sh
+#!/bin/bash
+echo "What is your name?"
+read name
+echo "My name is $name"
+
+#Arthematic Operations
+#!/bin/bash
+#Mathematics Operations
+x=10
+y=2
+let mul=$x*$y
+echo "$mul"
+
+let sum=$x+$y
+echo "The addition is $sum"
+
+echo "Substraction is $(($x-$y))"
+
+#Conditional Statement
+#if-else 
+vi if_else.sh
+#!/bin/bash
+read -p "Enter your marks: " marks
+if [[ $marks -gt 40 ]]
+then
+echo "You are PASS"
+else
+echo "You are FAIL"
+fi
+
+#elif  ---->Adding Multiple Statement to the script
+vi elif.sh
+#!/bin/bash
+
+read -p "Enter your marks: " marks
+if [[ $marks -ge 80 ]]
+then
+echo "1st Division"
+elif [[ $marks -ge 60 ]]
+then
+echo "2nd Division"
+elif [[ $marks -ge 40 ]]
+then
+echo "3rd Division"
+else
+echo "You are FAIL"
+fi
+
+vi case_demo.sh  -->Used for adding multiple conditions in the script
+#!/bin/bash
+echo "Provide an option"
+echo "a for print date"
+echo "b for listing the scripts"
+echo "c for checking the current location"
+read choice
+case $choice in
+a)date;;
+b)ls;;
+c)pwd;;
+*)echo "Please enter a valid value"
+esac
+
+sh case_demo.sh -->ENter value a , b , to observe the output of the command
+
+#Logical Operator --->logical operators are used to combine or modify the conditions in conditional statements
+&& --> This operator is used to combine two conditions. It returns true only if both conditions are true.
+|| --->This operator is used to combine two conditions. It returns true if at least one of the conditions is true.
+! -->
+
+vi logical_ops.sh
+#!/bin/bash
+read -p " What is your age? " age
+read -p " Your Country " country
+
+if [[ $age -ge 18 ]] && [[ $country == "India" ]]
+then
+echo "You can vote"
+else
+echo "You can not vote"
+fi
+
+vi logical_ops1.sh
+#!/bin/bash
+read -p " What is your age? " age
+read -p " Your Country " country
+
+if [[ $age -ge 18 ]] || [[ $country == "India" ]]
+then
+echo "You can vote"
+else
+echo "You can not vote"
+fi
+
+
+vi logical_ops2.sh  ---->Execute condition2 only when 1 is true else excute condition3
+#!/bin/bash
+#cond1 && cond2 || cond3
+age=15
+
+[[ $age -ge 18 ]] && echo "Adult" || echo "Minor"
+
+
+#Loops 
+
+vi for_loops1.sh
+#!/bin/bash
+
+for i in 1 2 3 4 5 6 7 8 9 10
+do 
+echo "Number is $i"
+done
+
+for name in Raju Sham Suresh naresh Javed Imran 
+do 
+echo "Name is $name"
+done
+#Using Wildcard 
+for j in {1..20}
+do 
+echo "Value is $j"
+done
+
+vi for_loop2_with_file.sh ---> Using for loop with file
+#!/bin/bash
+#Getting value from file names.txt
+FILE="/root/names.txt"
+for name in $( cat $FILE )
+do 
+echo "Name is $name"
+done
+
+After creating shell script before running it create a file at /root/names.txt
+sh for_loop2_with_file.sh 
+
+vi for_loop_with_array.sh
+#!/bin/bash
+myArray=( 1 2 3 hello hi )
+length=${#myArray[*]}
+for (( i=0; i < $length; i++ ))
+do 
+    echo "Value of array is ${myArray[$i]}"
+done
+
+vi while_loop.sh
+#!/bin/bash
+count=0
+num=10
+while [[ $count -le $num ]]
+do 
+echo "Value of variable is $count"
+let count++
+done
+
+vi untill_loop.sh
+#!/bin/bash
+a=10
+until [[ $a -eq 1 ]]
+do 
+echo "Value of a is $a"
+let a--
+done
