@@ -27,7 +27,7 @@ echo "Welcome Everyone"
 
 sh hello.sh
 
-#Comments
+#Comments-----------------------------------------------------------------------------------------------------------------
 vi comments
 echo "Comments demo"
 echo "Two types of comment"
@@ -43,7 +43,7 @@ echo "Demo Over"
 
 sh comments
 
-#Variables 
+#Variables----------------------------------------------------------------------------------------------------------------
 vi variable-demo.sh
 #!/bin/bash
 a=10
@@ -61,7 +61,7 @@ echo "The current shell is: $SHELL"
 
 sh variable-demo.sh
 
-#Command Line Arguments 
+#Command Line Arguments-------------------------------------------------------------------------------------------------
 vi cmd-argument.sh
 #!/bin/bash
 echo "Command Line Arguments Demo"
@@ -81,6 +81,7 @@ sh cmd-argument.sh  ----> It will not show any arg untill we dynamically pass th
 
 sh cmd-aruments.sh CloudAge DevOps Cloud  ---> To Recover the value of arguments we need to pass the argument dynamically
 
+#Conditional Statement----------------------------------------------------------------------------------------------------
 #We are passing conditions{if & Else} if the number of arg not equall to the number 
 #which we have specified in the if condition the shell script will not run
 
@@ -117,7 +118,7 @@ if [ $# -eq 2 ]
 -ge (Greater than or Equals to)
 
 
-#String 
+#String-----------------------------------------------------------------------------------------------------------------
 
 vi string.sh
 string_var="Hi Team, My name is Tohit Shaikh, Working In All Ops, In Kondhwa"
@@ -165,7 +166,7 @@ echo "My Name is ${myarray[name]}"
 echo "My Age is ${myarray[age]}"
 echo "My live in ${myarray[city]}"
 
-#String Operations
+#String Operations------------------------------------------------------------------------------------------------------
 
 vi string_ops.sh
 string_var="Hi Team, My name is Tohit Shaikh, Working In All Ops, In Kondhwa"
@@ -183,7 +184,7 @@ echo "What is your name?"
 read name
 echo "My name is $name"
 
-#Arthematic Operations
+#Arthematic Operations---------------------------------------------------------------------------------------------------
 #!/bin/bash
 #Mathematics Operations
 x=10
@@ -196,7 +197,7 @@ echo "The addition is $sum"
 
 echo "Substraction is $(($x-$y))"
 
-#Conditional Statement
+#Conditional Statement----------------------------------------------------------------------------------------------------
 #if-else 
 vi if_else.sh
 #!/bin/bash
@@ -241,7 +242,7 @@ c)pwd;;
 esac
 
 sh case_demo.sh -->ENter value a , b , to observe the output of the command
-
+--------------------------------------------------------------------------------------------------------------------------
 #Logical Operator --->logical operators are used to combine or modify the conditions in conditional statements
 && --> This operator is used to combine two conditions. It returns true only if both conditions are true.
 || --->This operator is used to combine two conditions. It returns true if at least one of the conditions is true.
@@ -280,7 +281,7 @@ age=15
 [[ $age -ge 18 ]] && echo "Adult" || echo "Minor"
 
 
-#Loops 
+#Loops-----------------------------------------------------------------------------------------------------------------
 
 vi for_loops1.sh
 #!/bin/bash
@@ -339,3 +340,259 @@ do
 echo "Value of a is $a"
 let a--
 done
+
+#While loop 
+
+vi while_loop_with_file.sh
+#!/bin/bash
+while read myvar
+do 
+echo "Values for file are $myvar"
+done < /root/names.txt
+
+#To read the content from csv file 
+
+vi test.csv	
+id,name,age
+01,tohit,19
+02,umair,24
+
+vi while_with_csv.sh --->If we want to get data from cloumnn in a csv file 
+#!/bin/bash
+while   IFS="," read id name age
+do 
+echo "Id is $id"
+echo "Name is $name"
+echo "Age is $age"
+done < test.csv 
+
+
+vi while_with_csv1.sh  -----> We will create a script in that we will ignore the first column in test.csv
+#!/bin/bash
+#We are opening the file and extracting value from test.csv except the 1st line
+cat test.csv | awk 'NR!=1 {print}' | while IFS="," read id name age 
+do 
+echo "Id is $id"
+echo "Name is $name"
+echo "Age is $age"
+done
+
+#Functions---------------------------------------------------------------------------------------------------------------
+
+vi function_demo.sh
+#!/bin/bash
+#To make function
+#Another Way of using fuction
+welcomeNote() {
+    echo "-------------------------"
+    echo "-------Welcome-----------"
+    echo "-------------------------"
+}
+<<comment
+function welcomeNote {
+    echo "-------------------------"
+    echo "-------Welcome-----------"
+    echo "-------------------------"
+}
+comment
+
+#We are calling our function
+welcomeNote
+welcomeNote
+welcomeNote
+welcomeNote
+
+
+vi function_with_arguments.sh
+
+ArgumentsPassing----------------------------------------------------------------------------------------------------------
+
+vi arguments.sh
+#!/bin/bash
+#We will access the arguments dynamicallly
+echo "First Argumen $1"
+echo "First Argumen $2"
+echo "All the argument are- $@  "
+echo "Number of arguments are - $#"
+#Using loop for accessing the value from the argument 
+for filename in $@
+do 
+    echo "Copying file - $filename"
+done
+
+#Shifting Argument------------------------------------
+
+vi shift_arguments.sh
+#!/bin/bash
+#To create user , provide username and description 
+echo "Creating user"
+echo "Username is $1"
+echo "Description is $2"
+
+#Other Usefull Concept---------------------------------------------------------------------------------------------------
+Break(Stop the loop if certain condition are met)---------------------------------
+
+vi break.sh
+#!/bin/bash
+#We need to confirm if the given no. is present or not 
+no=6
+
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17
+do 
+        #Break The loop if no. 6 is found
+        if [[ $no -eq $i ]]
+        then 
+            echo "$no is found"
+            break 
+        fi 
+        echo "Number is $i"
+done
+
+Continue()----------------------------------------------------------------------------------------------------------------
+vi continue.sh
+#!/bin/bash
+#Example of using Continue loop
+# Suppose we need odd no.
+
+for i in 1 2 3 4 5 6 7 8 9
+do 
+        let r=$i%2
+        if [[ $r -eq 0 ]]
+        then 
+            continue 
+        fi 
+        echo "Odd no. is $i"
+done 
+
+Sleep(To create delay b/w two execution )
+
+Exit (If certain condition are met stop the script execution)------------------------------------------------
+vi exit.sh
+#!/bin/bash
+#We will access the arguments dynamicallly
+#Using Exit with arguments 
+if [[ $# -eq 0 ]]
+then
+        echo "Please provide atleast 1 arguments"
+        exit 1
+fi
+echo "First Argumen $1"
+echo "First Argumen $2"
+echo "All the argument are- $@  "
+echo "Number of arguments are - $#"
+#Using loop for accessing the value from the argument 
+for filename in $@
+do 
+    echo "Copying file - $filename"
+done
+
+Exit Status (Gives you status of previous command if that was successfull)------------------------------------------------
+
+echo $?
+
+vi connectivity_check.sh
+#!/bin/bash
+
+read -p "Which site you want to check?" site
+ping -c 1 $site
+sleep 5s
+
+if [[ $? -eq 0 ]]
+then
+        echo "Connected to the $site"
+else
+        echo "Unable to connect to the site"
+fi
+
+basenmae /root/names.txt ------------> to check specific filename  
+
+dirname
+
+realpath <filename> ---------> To check the location if the file 
+
+#To check if file & dir exist or not 
+
+vi file_exist_check.sh
+#!/bin/bash
+FILEPATH=/root/shellscripting-youtube/test.csv
+
+if [[ -f $FILEPATH ]]
+then
+        echo "File Exist"
+else    
+        echo "File Does not exists"
+        exit 1
+fi
+
+#!/bin/bash
+FILEPATH=/root/shellscripting-youtube/now.csv
+
+if [[ -f $FILEPATH ]]
+then
+        echo "File Exist"
+else    
+        echo "Ctreating File"
+        touch $FILEPATH
+fi
+
+#Bash variable 
+vi dice_bash_variable.sh
+    #!/bin/bash
+
+    #Generating randon number between 1 to 6
+
+    NO=$(( $RANDOM %6 + 1))
+    echo "Number is $NO"
+
+#Root user check ----> Some script need to run with root user 
+#!/bin/bash
+#Checking if the user is root or not
+
+if [[ $UID -eq 0 ]]
+then 
+        echo "User is root"
+else 
+        echo "User is not root"
+fi
+
+
+#Redirection of script 
+
+ls > all_file.txt ---->It's store the command value in the all_file.txt
+
+date > all_file.txt
+hostname >> all_file.txt
+pwd >> all_file.txt
+
+vi redirect.sh    ---> It will store the output in the redirect/log file
+#!/bin/bash
+ping -c 1 www.google.com > redirect.log
+
+
+
+#In case you don't want to store your output in the file or on the terminal
+
+vi dev-null.sh
+#!/bin/bash
+
+read -p "Which site you want to check?" site
+ping -c 1 $site &> /dev/null
+#sleep 5s
+
+if [[ $? -eq 0 ]]
+then
+        echo "Connected to the $site"
+else
+        echo "Unable to connect to the site"
+fi
+
+#If you want ot maintain logging for your script you can use logger
+
+Location of log file of script ---> /var/log/messages
+
+vi logger.sh
+#!/bin/bash
+#Example of logger
+logger "This is log from ${0}"
+
+less /var/log/messages
