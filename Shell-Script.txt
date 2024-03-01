@@ -595,4 +595,109 @@ vi logger.sh
 #Example of logger
 logger "This is log from ${0}"
 
-less /var/log/messages
+less /var/log/messages    
+
+
+Debugging 
+
+vi debugging.sh
+#!/bin/bash
+set -e
+ pwd 
+ Date 
+ hostname 
+
+#Running script in background 
+
+vi background.sh
+#!/bin/bash
+
+for i in 1 2 3 4 5 6 7 8 9 10
+do 
+echo "Number is $i"
+sleep 3s
+done
+
+for name in Raju Sham Suresh naresh Javed Imran 
+do 
+echo "Name is $name"
+done
+
+chmod +x background.sh
+nohup ./background.sh &
+
+#Automating the script 
+
+We will use redirect.sh file to automate at particular time
+
+rm -rf redirect.log
+
+at <TIME>    ---Ater running this command observe the output that it will give the log file & At the time
+sh /root/shellscripting-youtube/redirect.sh
+crtl + D
+
+atq ---> To view the scheduled job & It is available till the job is not run
+
+#To repeadly run the job we will use cronjob It will not be installed by default we need to install it
+
+sudo yum update ---Update repository
+
+sudo yum install cronie  ----> Installing the cron package 
+
+sudo systemctl start crond
+
+sudo systemctl enable crond
+
+sudo systemctl status crond
+
+crontab -l --->To list the job
+crontab -e  --->We will enter a editor in wich we will configure our job  
+                To add new job
+30 16 * * * cd /root/shellscripting-youtube && ./redirect.sh  ----> Save the job and oberve that ypur script will be executed
+
+
+
+Projects------------------------------------------------------------------------------------------------------------------
+1.Project1 Monitoring Free RAM Space--------------------------------------------------------------------------------------
+
+mkdir projects
+
+cd projects
+ 
+free -h  ---> To check the free ram space
+
+free -mt | grep "Total" | awk '{print $4}' ---> Observring the ram spaces in mb and total way and greping the last line 
+
+vi ram_monotoring.sh
+#!/bin/bash
+
+FREE_SPACE=$(free -mt | grep "Total" | awk '{print $4}')
+TH=200
+if [[ $FREE_SPACE -lt $TH ]]
+then
+        echo  "WARNING , RAM space running out"
+else
+        echo "RAM space sufficient - $FREE_SPACEM"
+fi
+
+2.Monitoring Free DISK Space and send email alert
+
+ df -h | egrep -v "Filesystem|tmpfs" | grep "xvda1" | awk '{print $5}' | tr -d % | head -n 1 ---> the entire command is a pipeline that fetches disk usage percentage of the xvda1 filesystem
+
+vi file-system_monitoring.sh 
+#!/bin/bash
+
+#Monitoring the Filesystem spsce 
+FU=$(df -h | egrep -v "Filesystem|tmpfs" | grep "xvda1" | awk '{print $5}' | tr -d % | head -n 1)
+if [[ $FU -ge 80 ]]
+then 
+        echo "WARNING , disk space running out"
+else
+        echo "All good"
+fi 
+
+#Configuring postfix for sending email alert
+
+yum install postfix -y
+ yum install mailx -y
+
