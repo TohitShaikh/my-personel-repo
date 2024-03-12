@@ -1,0 +1,355 @@
+Lec1==================================================================================================================================================================
+## Jenkins Installation
+Lauch an ec2 Instance with instance type t2.medium 
+
+sudo su -
+
+yum install wget -y
+
+sudo yum install java-11-openjdk java-11-openjdk-devel -y
+
+java -version
+
+sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo  ----->Downloading jenkins and keeping it in the                                                                                                           "/etc/yum.repos.d/jenkins.repo"
+   
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key ----> command is used to import the GPG key (public key) for the Jenkins repository on Red                                                                                                             Hat-based systems
+
+yum install jenkins -y
+
+systemctl enable jenkins
+
+systemctl start jenkins
+
+systemctl status jenkins
+
+curl ifconfig.me ------>Take the public ip of the server and access the jenkins GUI with the browser
+
+##A default password will be generated in the /var/lib/jenkins/secrets/initialAdminPassword
+
+Lec2===================================================================================================================================================================
+##We will create our first job in the Jenkins GUI 
+jenkins dashboard --> New Items --> <Job name> --> select project type (Freestyle) --> Configuration page where you need to give detail of the job-->under source code
+mgmt select (Git)if your SCM is git  --> Paste the url of the repository where your source code is loacated -->After pasting the git url it will show error the soluton
+is install git on the jenkins server(yum install git -y) ---> save
+
+#If you to to change the configuration of the Job     In the organization our's repo will be private se we will provide credentials to  
+Slect the job --> configure --> Source code mgmt --> credentials --> add the credentials of the github account your usrername and password of github account --> after tha  navigate "Build Environment" --> Add build step --> select (Invoke top-level Maven targets) we can select another option also based on our requirement --> save --> build the job
+
+##After running the job it show error to view the error 
+Select the job --> Select the build no. on which it is showing the error -->select console output to see a detailed error
+
+##In Organization multiple jobs will be there and that multiple jobs will require multiple maven version so we will direct configure maven in jenkins '
+jenkins Dashboard --> Manage Jenkins --> tools --> scrol down navigate maven --> Add two versions of maven -->save 
+
+#As we have downloaded two version of maven so which maven to use we have to define it 
+jenkins Dashboard --> Select the job --> Configure --> Build Environment --> select version of maven which we want to use --> build the job and
+                                                 ___________________________________________________________________ 
+view console output The Job will be stored in the |var/lib/jenkins/workspace/facebook-dev/target/maven-web-application| location
+                                                 |this the default path _____________________________________________________|
+
+##After that we will generate report to sonarqube&& configure the sonarqube m/c ip address and token in the pom.xml and commit the changes come to jenkins dashboard and execute sonar qube report 
+Select the job --> configure --> Build steps --> add into the goals section to execute the sonarqube report -->sonar:sonar --> save & build the job
+
+##Uploading the package to the nexus repositories 
+
+http://13.233.122.200:9980/Tohitshaikh/repository/facebook-snapshot/
+
+http://13.233.122.200:9980/Tohitshaikh/repository/facebook-release/  ----->Change this two url in maven-web-application in the github.
+
+cd /var/lib/jenkins/tools/hudson.tasks.Maven_MavenInstallation/Maven3.9.3/conf
+
+vi setting.xml                                                                      
+##Add the below nexus credential in the setting.xml of maven that we installed in the jenkins m/c in line no 133
+     <server>
+       <id>nexus</id>   
+       <username>admin</username>
+       <password>Tohit8390#</password>
+     </server>
+
+After setting up the environment upload it into the artfact repository Using the jenkins "clean package sonar:sonar deploy" this command 
+
+##To deploy the application into the production/Tomcat we need a plugin called "Deploy to conatiner"download it using below step
+Jenkins dashboard --> Manage jenkins --> plugins --> available pugin install "Deploy to conatiner"
+
+Jenkin dashboard --> select the project --> configure --> under post build action navigate deploy to conatineer and select it --> In WAR/EAR file section add the path of the maven.ear file is stored (**/**/maven-web-application.war) --> add conatiner 9x remote --> url of tomcat server with port no. (http://3.111.149.43:8080/)od  --> add credentails of tomcat server --> selecte the credentail of the tomcat after adding it to jenkins from the add tab --> save it 
+
+##after configuriing changes build the project it show error to resolve the error follow bellow steps
+connect to tomcat m/c 
+
+
+vi /opt/tomcat/conf/tomcat-user.xml
+
+In the username tag add the rule in the existing role wit comma :,manager-script" after adding the role into the tomcat-user.xml build the project 
+
+In the Above steps we are manually building the project 
+
+Now we will automate the build trigger Process
+There are 3 ways to automate the build trigger 
+a)Poll SCM -It will runn only if the code in the github is updated  
+b)Build Periodically   c)Github Web hook 
+
+a) Poll SCM - Jenkin dashboard --> select the job --> configure --> build trigger & Select the pollSCM  --> give H/1 * * * * this means that every minute the jenkins will keep checking the github repository that updated code is available or not on basis of commit id it will trigger the job .	
+ 
+##To check if our jenkin is working or not we will uodate the code in the git hub 
+Github Dashboard --> Select teh repositories (maven-web-application) --> src/main --> web app --> jsps --> home.jsps --> Do some changes and commit the changes and observe that jenkin will runn the build on basis on change in the commit id .
+ 
+b)Build Periodically - Jenkin dashboard --> select the job --> configure --> build trigger & deselect the poll scm and select he build periodically -->give H/1 * * * * This means that it trigger build every minute 
+
+Lec3=================================================================================================================================================================
+c)Github Web Hook --> Jenkins dashboard --> Slect the job --> Build trigger select the Webhook option then After go to Github repository -->slect the repository Maven-web-application --> setting --> webhooks --> give the url of jenkins machine (https://3.110.181.220:8080/github-webhook/)-->Content type select application/json --> add webhook 
+
+Github token --> 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
+
+#To add Timestamp to console output 
+Jenkins dashboard --> Slect the job --> Build trigger --> Select add timestamp -->save it 
+
+#Deleting the build because the If the old build will remain in hte jenkins it will consume cpu and ram  
+As we add webhooks github will push the updated code everytime we need to delete the previous workspacez it will be locate in in [/var/lib/jenkins]
+We eill create the policy that we will keep last 5 build 
+
+Jenkins dashboard --> select the project --> general --> discard old build --> keep last 5 builds --> save it and refresh the page
+
+##Disabling the project 
+Jenkins dashboard --> Disable project --> observe that oyu will be not able to see the build trigger
+
+##Installing JaCoCo plugin because it will keep check on the sonarqube report if the sonar report in not up to the mark it will stop the build
+Jenkins --> Manage the plugins --> Install the plugins && We will add the jacoco in the jenkins dashboard
+Jenkins dasboard --> select the job --> post build action --> select from the dropdown Jacoco plugin and save it 
+ 
+#Directory Structure 
+Create a New Job and copy the the configuration from previous job
+
+#Connect to jenkins m/c and observer that it conatins all the configuration which we have configure in the jenkins
+
+##Creating project with maven project type 
+
+Install maven integration tool 
+Jenkins dashboard --> manage jenkisn --> plugins -->  maven integration plugin --> && Create a job with maven project type and observe the feature's and build the project 
+
+Lec4===================================================================================================================================================================
+Plugin Management 
+1)Deploy to conatainer - used for deploying project into application server Tomcat/jboss 
+
+2)Maven Integration - Used for maven project type 
+
+3)Safe Restart -It will restart the jenkins service when our jobs are completed 
+Jenkins dashboard --> manage jenkins --> plugins --> install safe restart plugin --> and observe that you will be able to see the safe restart plugins in jenkins GUI
+
+4)Next build number --> Inorder to change the next build nummber 
+Install the plugins (next build number) and ooption will be enabled on the gui of jenkins 
+
+5)JaCoCo --> With the help of this plugin we will stop the deployment if the code covarage is not up to the mark
+Jenkins --> Manage jenkins --> plugin --> Install the plugins && We will add the jacoco in the jenkins dashboard
+Jenkins dasboard --> select the job --> post build action --> select from the dropdown Jacoco plugin and save it
+
+6)Audit Trail --> Plugin used for managing/minitoring  the activity of the users.
+Jenkins dashboard --> manage jenkins --> plugins --> Audit trail install it -->
+
+Jenkins dashboard --> manage jenkins --> confiugre syetem --> audit trail --> add logger --> select log file --> Give location of log {(/var/lib/jenkins/audit-trail.log) jenkins will create the audit-trail.log on behave of himself } --> 10MB size file of every single log file --> We only want to keep the last 5 log file --> 
+save it --> View the log file in the jenkins server --> add build the project and view in the jenkins m/c it will start creating the log 
+For eg :- Create a job in the jenkins to view the activity in the jenkins -->Run shellscript with add build step --> execute shell  {echo "Iam running this command for test } and after running the job in the jenkins delete the job --> your every activity will be tracked  
+
+7)Job configuration history -->Trackiing the activity of user what we have configure in the job and which configuration in the job 
+Jenkins --> Manage jenkins --> plugin --> available --> search and download "Job configuration history" and view in the main page that job configuration plugin will be installed 
+Perform some activity's (Creating,Deleting,config changes) in configuration changes and observe in the job configuration it will displau every activity
+Delete a job and view in the job configuration history a restore optiion will be available restore it 
+
+8)Schduled Build Job -->We schedule the job on a specific time
+Jenkins dashboard --> manage jenkins --> plugins --> Inatll schedule plugins --> and veiw in the dashboard there a icon will be created  
+
+9)Blue Ocean -
+Jenkins dashboard --> manage jenkins --> plugins --> install "Blue Ocean pipeline editors" --> Select the blue ocean icon --> you will able to veiw new GUI
+
+10)Build Name setter -We will be customizing the build no. to environment name.
+1 -- dev-1        Jenkins dashboard --> Manage jenkins --> Plugins --> install "Build Name setter"
+2 -- dev-2        Jenkins dashboard --> select the job --> build environment --> select the "Set Build Name" option --> change the syntax to #$(BUILD_NUMBER) -->  
+3 -- dev-3                                                                                                                              dev- #$(BUILD_NUMBER)    
+4 -- dev-4
+5 -- dev-5 
+Lec5==================================================================================================================================================================  
+Jenkins Default port no. is 8080 to change this we need to go the jenkins server in the 
+
+vi /usr/lib/systemd/system/jenkins.service ----->For customizing the prot no. use this location 
+Change the port number to "9999"
+systemctl daemon-reload
+systemctl restart jenkins
+  
+
+Veiws -- It's a way to organize the jobs in a specgic manner or certain criteria 
+Jenkins dasboard --> select + icon --> Give a name to the ob --> list view --> select the jobs - add the jobs according to your needs in the veiw
+
+Jenkins Security - 
+Jenkins dashboard --> Manage Jenkins --> User's --> Create 4 user 2developers & 2Devops's Engineer --> and try to access with the user 
+**If you see manage jenkins option after login with the newly created user 
+
+#Providing limited access to the user 
+Jenkins dashboard --> Manage Jenkins --> Security --> Authorization --> We need to install plugins "Role based authorization  after that you will be able to see new option in the drop down -->Select Role based authorization startegy --> add every user available in the jenkins server {if you donot add a user in the "Role based authorization startegy" that user will not be able to access the jenkins server} --> Give the user required permission {As we have created 4 user we should 2developer we wil give read access and 2devop's engineer read & write access} 
+
+Backup
+Jenkins dashboard --> Manage Jenkins --> plugins --> Install thin backup ---> and configure it where to store the backup --> Jenkins dashboard --> Manage Jenkins --> at the last you will see thin backup option select  it --> {make a dir (jenkinsbackup)in the jenkins server and change the ownership to root to jenkins user} --> setting --> give the location of the bachup --> Maintain 5 backup set --> select the file which wee want to take backup of and save it --> to take a backup click on backup option --> To autmate this process select the 2nd option from the setting tab in the thin backup option 
+
+Lec6===================================================================================================================================================================
+PipeLine Project type - Scripted Way -- PipeLine is series of automated steps that goes through , from writing it to deploying it . 
+
+#Create a new project 
+Jenkins dashboard --> new item --> give name to the job and select pipieline project type --> select the job --> Add the Script In the Script section --> at the end select pipeline syntax --> select snipet generator --> In sample step select git --> give the url of github repo -->specify branch name && give credential --> Generate script --> Script Will be generated for pulling the code from the github repo paste the sript in the stage where you have define the github stage  
+
+2#Maven Setup In Scripted way  
+After pulling the code from Github we will add next stage --> Maven build stage we add the steps in the script First time runing this command it will show error command not found to resolve ths error we will add a variable to the script of maven as we have installed maven uing global tool configuration we need to set the path of maven s/w  in the script and paste it into the script
+
+3##Sonarqube generate report and update the pom.xml in the github repo 
+
+4##Uploading Artifacts inti Artifact repository/Nexus Provide your Accouts credentials in the int the settings.xml 
+
+5#Another Way of Automating the Pipleine scripted Way is Getting the Script ready and Pushing it into the Github and from github only we will take the code as well as the script for pipeline project 
+
+create a file in the github with name "Jenkins-ScriptedWay" and paste the whole configuraiton of script in that file and from jenkins copy and pasting the whole code in pipleline area just 
+select the another option as follow down 
+Jenkins dashboard --> Select the Job -->configure --> select From dropdown "Pipeline Script from SCM" --> Select the repository url and other info And change the name of "Scrpt file"in the jenkins the file in which script is located in the github  --> Build The job and observe the job output 
+
+Sleect the job --> Pipleline syntax from last --> To set policy for thr project --> select the properties set job properties --> slect 5 build  to keep and 5 artifact to keep in the nexus --> generate the script and paste the script inthe github / in the pipline script to keep last 5 build and 5 artifact s in the nexus
+ 
+//Script for pipeline project 
+node{
+
+//Adding Variable for Maven 
+def mavenHome = tool "maven3.9.2"
+echo "The Node name is: ${env.NODE_NAME} "
+echo "The Job name is: ${env.JOB_NAME} "
+echo " The Build number is: ${env.BUILD_NUMBER} "
+properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '', numToKeepStr: '5'))])
+buildName 'DEV - $(BUIlD_NUMBER)
+	
+//Pulling the Code from the Github Repository 
+stage("Source-Code-Git"){
+git credentialsId: 'edfa17d0-49e7-4150-ab7c-3cdf12247b98', url: 'https://github.com/TohitShaikh/maven-web-application.git'
+}
+
+//Build the Code 
+stage("Build-stage"){
+sh "$mavenHome/bin/mvn clean package"
+}
+
+//generating SonarQube Report
+stage("Generate Sonarqube Report"){
+sh "$mavenHome/bin/mvn sonar:sonar" 
+}
+
+//Uploading the Artifact into Artifact repositories
+stage("Uploading the Artifact into Nexus "){
+sh "$mavenHome/bin/mvn deploy"
+}
+
+}//Node Closing
+
+Lec7===================================================================================================================================================================
+Pipeline Scripted Way --Declarative Way - Defining it into more structure way 
+Jenkins dashboard --> New item --> Create  a new job and select pipeline project type --> paste the scrpt in the script area --> Build the project 
+Pipekine Project type- Declaartive Way
+
+#Creating Script for discarding old build 
+Jenkins dashboard --> Select the declarative job --> pipeline syntax --> Declarative Directive Generate --> Select the option tag from dropdown --> adn fill the all the detail 
+
+3#We are enabling the poll scm 
+generating script from  Jenkins dashboard --> Select the declarative job --> pipeline syntax --> Declarative Directive Generate --> select trigger from the dropdown --> and add 5star in the pollscm 
+ 
+pipeline {
+    // We are specifying that in node to run the project e.g., Master/Slaves Node
+    agent any
+
+    // Configuring Maven
+    tools {
+        maven "maven3.9.2"
+    }
+
+    options {
+        buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '', numToKeepStr: '5'))
+        timestamps()
+    }
+
+    // Getting the code from the GitHub repository
+    stages {
+        stage('Source-Code-Git') {
+            steps {
+                git credentialsId: 'edfa17d0-49e7-4150-ab7c-3cdf12247b98', url: 'https://github.com/TohitShaikh/maven-web-application.git'
+            }
+        }
+
+        // 2nd Stage doing the build
+        stage('Build') {
+            steps {
+                sh "mvn clean package"
+            }
+        }
+
+        // 3rd Sonarqube report submission
+        stage('Report-Stage') {
+             steps {
+                sh "mvn sonar:sonar"
+             }
+        }
+
+        // 4th Uploading Artifactory into nexus
+        stage('Uploadinginto-nexus') {
+            steps {
+                sh "mvn deploy"
+            }
+        }
+    }
+}
+	
+
+Multibranch Pipeline :- Multibranch Pipeline in Jenkins is a way to organize and automate the building, testing, and deployment of code from multiple branches in a version control system 
+Create branches in github repository for practical
+
+Create a new job with multibranch pipeline project type --> select the job --> add branch sources --> add repo url and give credential -->In build configuration add the right name of script in which we have created job 
+
+
+Lec8==================================================================================================================================================================
+*#Build with Parameters
+Parameter's means value or configuration that we passs to a script or job to controls it's execution and behaviour
+
+Why do use parameter?
+If we want to pass the parameter's dynamically while running the job.
+
+#Building the job with Freestyle project type
+Create a new job --> select freestyle project type --> add the github repo url --> After adding the github repo url you will an option in general "This project is parameterized" --> select "This project is parameterized" --> select the choice parameter --> give the name (BranchName) of the parameter --> in choices section add the branches that are availabel in github give same name in the choices section --> add a variable value for the all branches that we have specified in the choices section with it's name --> add this variable value "*/$(BranchName)" in the branches to build section 
+
+Add 1 more parameter 
+selecting from drropdown add parameter --> Give name (BranchName) to the parameter --> In default  value section add name --> save the project and navigate --> build with parameter and build it 
+
+#Building the job with Pipeline project type 
+
+Create a job --> select pipeine project type --> we do not want to use gui we will use the parameter's in the script so we will generate the script from pipeline syntax and add that generated snipit in the pipeline script 
+select pipeline syntax --> select "Declarative Directive Generate" --> select Parameter from directive option --> add parameter select choice parameter --> in choices section add branches name in the choices section --> copy the snipet from the generated box and paste it into the pipeline script or paste the below script in the script section 
+ 
+
+
+#Build with parameter in a pipeline script  	
+pipeline {
+    agent any
+
+    parameters {
+        choice choices: ['development', 'qa', 'test', 'uat'], name: 'BranchName'
+    }
+
+    stages {
+        stage('CheckOutCode') {
+            steps {
+                script {
+                    git branch: "${params.BranchName}", credentialsId: 'edfa17d0-49e7-4150-ab7c-3cdf12247b98', url: 'https://github.com/TohitShaikh/maven-web-application.git'
+                }
+            }
+        }
+    }
+}
+
+#Master salve Architecture
+Create an linux machine with t2.medium instance type and install java on it
+
+After creating and connecting to ec2 instance create a directory as "salve1" to store the information of the salve and the job 
+#Creating salve machine for jenkins 
+Jenkins dashboard --> manage jenkins --> nodes  --> new node --> give name to the salve and select permanent agent --> select the number of executor on basis of how many parralel job we want to execute --> add the path of the directory which we have created in the ec2 machine --> add label name as "salves" -->  select ssh type connection fron the dropdown of lauch method --> paste the public ip of salve m/c in the Host area --> select add crendatials --> and add the private key(pem file) which we have specified at the time of lauching the instance --> select ssh agent from the dropdown and --> In user name section add "ec2-user" and upload private key --> select manually trusted key verification strateg from host key verification strategy --> to run the job in the salves --> select the any job --> go to the general tab and select "Restrict where this project can be run" and add "salves" in the label tag && build the project --> Install git in the salve machine & build the project 
+
+#To use in the project pipeline type 
+in the agent any section add label "slave1"
