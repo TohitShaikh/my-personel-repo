@@ -1,0 +1,46 @@
+We are paracticing docker file 
+
+vi Dockerfile
+FROM ubuntu
+RUN echo "Welcome RUN ONE"
+RUN apt update -y && apt install git curl wget -y
+RUN mkdir -p /opt/app
+RUN echo "Welcome RUN TWO"
+CMD ["echo" "Welcome to cmd"]
+RUN echo "Welcome"
+CMD ["date"]
+
+docker build -t image1 .
+
+vi Dockerfile_ENT
+FROM ubuntu
+RUN echo "Welcome RUN ONE"
+RUN apt update -y && apt install git curl wget -y
+RUN mkdir -p /opt/app
+RUN echo "Welcome RUN TW0"
+ENTRYPOINT ["echo","Welocome to Entrypoint"]
+
+docker build -t iamge2 -f Dockerfile_ENT .
+
+vi Dockerfile_ENT_CMD
+FROM ubuntu
+RUN echo "Welcome RUN ONE"
+RUN apt update -y && apt install git curl wget -y
+RUN mkdir -p /opt/app
+RUN echo "Welcome RUN TW0"
+ENTRYPOINT ["echo","Welocome to Entrypoint"]
+CMD ["date"]
+
+docker build -t iamge3 -f Dockerfile_ENT_CMD .
+
+#In simple terms, this Dockerfile builds your Maven project inside a Docker container with Java 8, and then copies the resulting WAR file into a Tomcat container, allowing you to deploy your web application.
+vi muilti-stage-build 
+FROM maven:3-jdk-8-alpine as build
+WORKDIR /app
+COPY . .
+RUN mvn clean package
+
+FROM tomcat:8.0.20-jre8
+COPY --from=build /app/target/maven-web-app*.war /usr/local/tomcat/webapps/maven-web-application.war
+
+docker build -t multi-stage-build -f multi-stage-dockerfile .
