@@ -313,7 +313,7 @@ Why do use parameter?
 If we want to pass the parameter's dynamically while running the job.
 
 #Building the job with Freestyle project type
-Create a new job --> select freestyle project type --> add the github repo url --> After adding the github repo url you will an option in general "This project is parameterized" --> select "This project is parameterized" --> select the choice parameter --> give the name (BranchName) of the parameter --> in choices section add the branches that are availabel in github give same name in the choices section --> add a variable value for the all branches that we have specified in the choices section with it's name --> add this variable value "*/$(BranchName)" in the branches to build section 
+Create a new job --> select freestyle project type --> add the github repo url --> After adding the github repo url you will an option in general "This project is parameterized" --> select "This project is parameterized" --> select the choice parameter --> give the name (BranchName) of the parameter --> in choices section add the branches that are availabel in github give same name in the choices section --> add a variable value for the all branches that we have specified in the choices section with it's name --> add this variable value "*/$(BranchName)" in the branches to build section in the repository section 
 
 Add 1 more parameter 
 selecting from drropdown add parameter --> Give name (BranchName) to the parameter --> In default  value section add name --> save the project and navigate --> build with parameter and build it 
