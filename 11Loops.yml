@@ -1,0 +1,30 @@
+---
+- hosts: 
+  become: true
+  tasks: 
+  - name: Install Git
+    yum: 
+     name: git
+     state: present
+  - name: Install apache server
+    yum: 
+     name: httpd
+     state: present
+  - name: Install tree
+    yum: 
+     name: tree
+     state: present  
+  - name: Install unzip 
+    yum: 
+     name: unzip
+     state: present  
+...      
+
+
+
+
+
+
+
+
+

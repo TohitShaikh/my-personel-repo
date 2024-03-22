@@ -1,0 +1,12 @@
+---
+- hosts:
+  become: 
+  tasks: 
+  - name: 
+    user: 
+     name="{{item}}"
+     create_home=yes
+    with_items: 
+     - tohit
+     - sarim
+...     
