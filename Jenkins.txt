@@ -25,6 +25,8 @@ systemctl status jenkins
 curl ifconfig.me ------>Take the public ip of the server and access the jenkins GUI with the browser
 
 ##A default password will be generated in the /var/lib/jenkins/secrets/initialAdminPassword
+c40c4723-0b0d-4bfa-9173-ccb346c2b655
+UUID=c40c4723-0b0d-4bfa-9173-ccb346c2b655  /var/lib/jenkins xfs  defaults,nofail  0  2
 
 Lec2===================================================================================================================================================================
 ##We will create our first job in the Jenkins GUI 

@@ -1,4 +1,4 @@
-#Nexus Installation 
+sudo #Nexus Installation 
 Lauch an ec2 instance with instance type t2.medium with 2vcpu and 4GBRam 
 
 Lec1 
@@ -30,18 +30,18 @@ nexus   ALL=(ALL)  NOPASSWD: ALL  <---add this line in visudo---> visudo
 
 sudo su nexus -
 pwd # cheacking the directory 
-chown -R nexus:nexus /opt/nexus
+sudo chown -R nexus:nexus /opt/nexus
 
-chown -R nexus:nexus /opt/sonatype-work
+sudo chown -R nexus:nexus /opt/sonatype-work
 
-chmod -R 775 /opt/nexus
+sudo chmod -R 775 /opt/nexus
 
-chmod -R 775 /opt/sonatype-work
+sudo chmod -R 775 /opt/sonatype-work
 
-vi /opt/nexus/bin/nexus.rc   ------>Remove the # comment from the line and write nexus b/w the double inverted comma.
+sudo vi /opt/nexus/bin/nexus.rc   ------>Remove the # comment from the line and write nexus b/w the double inverted comma.
 run_as_user="nexus"
 
-ln -s /opt/nexus/bin/nexus /etc/init.d/nexus
+sudo ln -s /opt/nexus/bin/nexus /etc/init.d/nexus
 
 sudo systemctl enable nexus
 sudo systemctl start nexus
@@ -56,8 +56,8 @@ Take the public ip of the machine and access it using browser with port no. 8081
 http://3.111.188.124:8081
 
 SignIn to nexus repo using the credential which is located in the below file. 
-Your admin user password is located in
-/opt/sonatype-work/nexus3/admin.password on the server.
+Your admin user password is located in below location
+sudo cat /opt/sonatype-work/nexus3/admin.password 
 
 c80bcc23-8b38-4df2-8cd2-301ca2f45b30  ------>Password at first login 
 
@@ -82,16 +82,17 @@ sh nexus start
 After that restart the nexus web page & it wil not work becuse we have change the portn. & contextpath
 http://13.234.17.43:9980/Tohitshaikh
 
+##Creating Our Own Custom Repositories
+
 Custom repo 1)Nexus --> setting icon --> repositories --> create repositories --> select Maven2 (Hosted) --> Repo name - facebook-snapshot -->Change Version policy release to snapshot --> leave everthing as default --> create repository 
 
-##Creating Our Own Custom Repositories 
 Custom repo2)create repositories --> select Maven2 (Hosted) --> Repo name - facebook-release--> leave everthing as default --> create repository
 
 ##Copy the Url of both cusutom repositories 
 
-http://13.126.50.25:8081/repository/facebook-snapshot/
+http://13.212.50.125:8081/repository/demo-release/
 
-http://13.126.50.25:8081/repository/facebook-release/
+http://13.212.50.125:8081/repository/demo-snapshot/
 
 
 ####This above 2 URL we will configure in the pom.xml in the <distributionManagement> tags && for our project..

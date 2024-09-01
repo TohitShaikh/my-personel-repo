@@ -1,0 +1,492 @@
+----------------------------------------------------------------------------PHASE1-----------------------------------------------------------------------------------
+#Create 3 ec2 machine with ubuntu 20.04 with t2.medium type & storage 25GB (1Master & 2Slave)
+
+Connect to 3 machine -----------------------------------------------------------------------------------------------------
+--------------------------------------------COMMON FOR MASTER & SLAVES(Pre-Requisite START)----------------------------------------------------
+1#Switch to root user
+sudo su -
+
+2#Disabling Swap Memory
+because kubernetes official documentation refers to disabliiing it 
+Swap Memory - The data which is avaible n the ram and after the ram is full we swap the data of ram in the system storage
+swapoff -a
+sed -i '/swap / s/^\(.*\)$/#\1/g' /etc/fstab
+
+
+3#Install packages. To install Kubernetes and containerd run these commands
+sudo apt update && sudo apt upgrade -y
+
+sudo apt install docker.io -y
+sudo chmod 666 /var/run/docker.sock
+
+sudo apt-get install -y apt-transport-https ca-certificates curl gpg
+sudo mkdir -p -m 755 /etc/apt/keyrings
+
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
+sudo apt-get update
+
+#Install Kubernetes Components[On Master & Worker Node]
+sudo apt install -y kubeadm=1.28.1-1.1 kubelet=1.28.1-1.1 kubectl=1.28.1-1.1
+
+#apt-mark will hold prevent the package from being automatically upgraded or remove
+sudo apt-mark hold kubelet kubeadm kubectl 
+
+7#Enabling kubellet service
+sudo systemctl daemon-reload
+sudo systemctl start kubelet
+sudo systemctl status kubelet
+
+--------------------------------------------COMMON FOR MASTER & SLAVES(Pre-Requisite ENDS)-------------------------------------
+
+In Master Node Only-------------------------------------------------------------------------------------------------------
+
+sudo su -
+
+#Initialize Kubernates master by executing below commond
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+
+#Craeting config file for kubectl
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+kubectl get nodes
+
+# To verify, if kubectl is working or not, run the following command.
+
+kubectl get pods -n kube-system -o wide 
+
+#You will notice from the previous command, that all the pods are running except one: ‘kube-dns’. For resolving this we will install a # pod network. To install the weave pod network, run the following command:
+
+kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml/
+
+#Get an auditing tool for scannign the kubernetes cluster // for security purpose
+https://github.com/Shopify/kubeaudit/releases
+wget https://github.com/Shopify/kubeaudit/releases/download/v0.22.1/kubeaudit_0.22.1_linux_amd64.tar.gz
+tar -xvzf kubeaudit_0.22.1_linux_amd64.tar.gz
+sudo mv kubeaudit /usr/local/bin
+kubeaudit all
+
+------------------------------------------------------------------------------PHASE-2---------------------------------------------------------------------------------
+Lauch 2 ec2 machine for sonarqube and nexus with ubuntu 20.04 with t2.medium with storage 20GB && Launch 1 ec2 intance for jenkins with ubuntu 20.04 with t2.large with storage 30GB
+#Connect to SonarQube and Nexus machine and jenkins server and install docker on it  
+sudo apt update && sudo apt upgrade -y
+#It is recommended that to install docker officially
+
+# Add Docker's official GPG key:
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt-get update -y 
+
+#Installing docker 
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+#All the user will be able to run docker command
+sudo chmod 666 /var/run/docker.sock
+
+#Launch a SonarQube container in Sonarqube server
+docker run -d --name sonar -p 9000:9000 sonarqube:lts-community
+
+docker ps
+
+curl ifconfig.io
+
+#Launch a nexus container in nexus server
+docker run -d --name nexus -p 8081:8081 sonatype/nexus3
+
+docker ps
+
+curl ifconfig.io
+
+After succcessfully launching container we need password for nexus which will be located in inside container 
+
+docker exec -it <cont-id> /bin/bash
+
+cat /opt/sonatype/sonatype-work/nexus3
+
+#Connect to jenkins server
+sudo apt update && sudo apt upgrade -y
+
+sudo apt install openjdk-17-jre-headless -y
+
+sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update
+sudo apt-get install jenkins -y
+
+
+---------------------------------------------------------------------------PHASE3-------------------------------------------------------------------------------------
+
+#Fork the boardgame repo to our personal repo
+https://github.com/jaiswaladi246/Boardgame
+
+---------------------------------------------------------------------------PHASE3-------------------------------------------------------------------------------------
+#Plugin installation in the jenkins
+Jenkins dashboard --> manage jenkins --> Available plugin -->
+1. jdk --> Eclipse Temurin installerVersion
+2. maven --> Maven Integration , Config File Provider , Pipeline Maven Integration
+3. sonarqubescanner --> 
+4. Docker --> docker , docker pipeline , docker build step 
+5. Kubernetes -->kubernetes , kubernetes cli , kubernetes credentials , kubernetes client api 
+
+
+#Configuring the plugin 
+Jenkins dashboard --> manage jenkins --> tools --> jdk
+name - jdk 17 
+install automatically 
+version - 17.09+
+
+SonarQube Scanner installations
+name - sonar-scanner
+version - latest 
+
+maven
+name - maven3
+version - 3.6.1
+
+Docker
+name - docker 
+install automatically
+download from docker.com
+version - latest
+
+#Create first pipeline job
+Jenkins dashboard --> new item --> pipeline
+general --> discard old bilds 
+Max build to keep --> 2
+
+#Install trivy on jenkins server for vulnerability scan
+
+sudo apt-get install wget apt-transport-https gnupg lsb-release
+
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+
+echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+
+sudo apt-get update
+
+sudo apt-get install trivy
+
+#Configuring sonarqube server with token
+Manage Jenkins --> credentials --> system --> Global credentials --> add credentials
+ - Credentials type: `Secret text`
+ - secret : squ_d99eb9eb9d8978a1a0b802b22b2b8c4f0ce4731f
+ - ID: `sonarqube-token`
+
+#adding soanrqube server detail
+Manage Jenkins --> system --> SonarQube
+Name:- sonar
+Server URL:- http://35.154.125.20:9000
+Server authentication token: sonarqube-token
+
+
+#Add qualty gate stage for that we need to create a webhook on sonarqube
+Configuration --> webhook -->
+name:- jenkins
+url :- http://13.126.121.56:8080/snarqube-webhook/
+
+#Add this below content in pom.xml
+<project>
+    <!-- Other configuration elements -->
+
+    <distributionManagement>
+        <repository>
+            <id>maven-releases</id>
+            <url>http://13.201.188.127:8081/repository/maven-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>maven-snapshots</id>
+            <url>http://13.201.188.127:8081/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <!-- Other configuration elements -->
+</project>
+
+
+#Add nexus credential in maven setting.xml file
+Jenkins dashboard --> manage jenkins --> Managed file --> add new config file --> Global Maven settings.xml
+Id :- global-setting
+
+
+#For deploying the artifact into kubernetes we need to create user in kubernetes
+vi svc.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins
+  namespace: webapps
+
+kubectl create ns webapps
+
+kubectl apply -f svc.yml
+
+#Creating role
+role.yml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-role
+  namespace: webapps
+rules:
+  - apiGroups:
+        - ""
+        - apps
+        - autoscaling
+        - batch
+        - extensions
+        - policy
+        - rbac.authorization.k8s.io
+    resources:
+      - pods
+      - componentstatuses
+      - configmaps
+      - daemonsets
+      - deployments
+      - events
+      - endpoints
+      - horizontalpodautoscalers
+      - ingress
+      - jobs
+      - limitranges
+      - namespaces
+      - nodes
+      - pods
+      - persistentvolumes
+      - persistentvolumeclaims
+      - resourcequotas
+      - replicasets
+      - replicationcontrollers
+      - serviceaccounts
+      - services
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+kubectl apply -f role.yml
+
+#Assgning the service account ot the role
+vi bind.yml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-rolebinding
+  namespace: webapps 
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: app-role 
+subjects:
+- namespace: webapps 
+  kind: ServiceAccount
+  name: jenkins 
+
+kubectl apply -f bind.yml
+
+#creating token 
+vi secret.yml
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: mysecretname
+  annotations:
+    kubernetes.io/service-account.name: jenkins
+
+kubectl apply -f secret.yml -n webapps
+
+#Take the token after running the below command
+
+kubectl describe secret mysecretname -n webapps
+
+eyJhbGciOiJSUzI1NiIsImtpZCI6Il9EaTFCSHZDZUFobEtoME5ScEhmY016N1pyX05IUWtZVE54N09VdlNlNmcifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJ3ZWJhcHBzIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6Im15c2VjcmV0bmFtZSIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJqZW5raW5zIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiY2JhZjI2YjctNzhmYi00OGY0LTljYWYtNjY1MTBiZmMxMDIwIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OndlYmFwcHM6amVua2lucyJ9.T1m9z4bMJ8VvIOxkix3nkPPAq0NidTlosOLttsGH6xobl8Au3cUGCfpj97qi_Rr5a6SaswyDPZhA6496ci5sEXO74ymttvYf5M5HQLA3jEVwY2hE_5R71tOoXhdq7mjklo8WtZQbrPoyEAvskylAFg3vacGIixgObCRfQuhO9v1GCaBFiCFUcC5DvhkkiyjYYvOUn-wg9VtMQKZ75neWFX6MLrGoXT1su1yAYy4WkAcagSbVx0-wBrAO9DOqPOXy_-OSw4SPHODEZSELhwXLE-CoYZs8YkUtXlE8eV3b6rbZLQq4Bdlyx1raG7lXXJIRReg6o3D6W3TUMwKDgNk-Ng
+
+
+
+#add this token in credential in jenkins
+
+#genetrate a pipeline script for deployment in script 
+
+Pipeline syntax --> 
+Sample step : withkubeConfig: Configure kubernetes CLI (kubectl)
+credential : k8-cred
+Kubernetes server endpoint: https://172.31.41.161:6443 (We will find it the .kube/config file)
+cluster name: kubernetes
+namespace: webapps
+
+#After that create deployment-service.yml
+apiVersion: apps/v1
+kind: Deployment # Kubernetes resource kind we are creating
+metadata:
+  name: boardgame-deployment
+spec:
+  selector:
+    matchLabels:
+      app: boardgame
+  replicas: 2 # Number of replicas that will be created for this deployment
+  template:
+    metadata:
+      labels:
+        app: boardgame
+    spec:
+      containers:
+        - name: boardgame
+          image: tohitshaikh/boardgame:latest # Image that will be used to containers in the cluster
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080 # The port that the container is running on in the cluster
+
+
+---
+
+apiVersion: v1 # Kubernetes API version
+kind: Service # Kubernetes resource kind we are creating
+metadata: # Metadata of the resource kind we are creating
+  name: boardgame-ssvc
+spec:
+  selector:
+    app: boardgame
+  ports:
+    - protocol: "TCP"
+      port: 8080 # The port that the service is running on in the cluster
+      targetPort: 8080 # The port exposed by the service
+  type: LoadBalancer # type of the service.
+
+#Execute this command on jenkins server
+curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin
+kubectl version --short --client
+
+#Setting mail notifucation
+Go to google account --> (Click on the right side)managae google account --> security --> 2 step verification --> After login we get some option --> App password --> set password jenkins (It will generate a password with that password  we will send mail notification) eeyw qzqu wuwt qgyf
+
+After that go jenkins dashboard --> manage jenkins --> system --> extended email notification --> 
+SMTP server:- smtp.gmail.com
+SMTP port:- 465
+Addvanced: add credential
+kind:- username and password
+Username:- shaikhtohit23@gmail.com
+password:- eeyw qzqu wuwt qgyf
+
+After that go jenkins dashboard --> manage jenkins --> system --> email notification --> 
+smtp server:- shaikhtohit23@gmail.com
+advanced
+Use SMTP Authentication
+Username:- shaikhtohit23@gmail.com
+password:- eeyw qzqu wuwt qgyf
+smtp port:- 465
+save it && test the connection 
+After testing it configure it the pipeline 
+
+
+#Monitoring
+Install prometheus && Grafana on server
+#Install black box exporter which will help us ot monitor the the health of website
+
+wget https://github.com/prometheus/blackbox_exporter/releases/download/v0.24.0/blackbox_exporter-0.24.0.linux-amd64.tar.gz
+
+tar -xvf blackbox_exporter-0.24.0.linux-amd64.tar.gz
+
+cd blackbox_exporter-0.24.0.linux-amd64/
+
+./blackbox_exporter &
+
+http://13.201.168.238:9115/
+
+#Adding specific session in prometheus.yml file
+
+Copy the section from https://github.com/prometheus/blackbox_exporter
+
+#Add the below section in the prometheus.yml file
+
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]  # Look for a HTTP 200 response.
+    static_configs:
+      - targets:
+        - http://prometheus.io    # Target to probe with http.
+        - http://65.1.64.108:30317 # Target to monitor the website
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 13.127.180.74:9115  # The blackbox exporter's real hostname:port.
+
+#After saving info in yml file restart the prometheus server
+
+pgrep prometheus
+
+kill <pid>
+
+./prometheus &
+
+#Veiw the target in prometheus GUI 
+prometheus dashboard --> status --> target --> you will the website ip
+
+#add data source to grafana
+garafana dashboard --> connections --> data sources --> add data sources --> prometheus --> paste the url of prometheus save it a
+
+Import a dashboard 
+Search in new tab blackbox grafana dashboard && copy the id from there 
+
+After copying the id paste the id in garfana and select the data source
+
+#System level monotoring
+#We will manage jenkins woth prometheus so we need to install promerheus plugin
+Jenkins dashboard --> manage jenkins --> plugins --> prometheus and restart the jenkins server
+
+#Install node exporter n jenkins server
+
+wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
+
+tar -xvf node_exporter-1.7.0.linux-amd64.tar.gz
+
+cd node_exporter-1.7.0.linux-amd64/
+
+./node_exporter &
+
+Go to Jenkins dashboard --> manage jenkins --> system --> prometheus --> leave the settiing as default
+ 	
+#In the prometheus.yml file add below content and restart the prometheus
+
+- job_name: 'node_exporter'
+  static_configs: 
+    - targets: ['13.126.121.56:9100'] #Jenkins public ip with node expoerter port no.
+
+- job_name: 'jenkins'
+  metrics_path: '/prometheus'
+  static_configs: 
+    - targets: ['13.126.121.56:8080'] #Jenkins public ip with jenkins port no.
+
+pgrep prometheus
+
+kill <pid>
+
+./prometheus &
+
+#Add data source to garfana 
+
+Import a dashboard 
+Search in new tab node exporter dashboard && copy the id from there 
+
+Grafana dasboard --> dashboard --> add new --> import --> load and add prometheus server 
+
+

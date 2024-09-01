@@ -8,7 +8,7 @@
 
    sudo su - 
    
-   yu update -y 
+   yum update -y 
 
   yum install wget -y 
   

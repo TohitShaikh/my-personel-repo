@@ -6,3 +6,7 @@ EXPOSE 8080
 #COPY jenkins.war jenkins.war
 ENV JENKINS_HOME=/var/jenkins_data
 ENTRYPOINT ["java" , "-jar" , "jenkins.war"]
+
+
+
+docker run -it --name jenkins -p 8080:8080 j1

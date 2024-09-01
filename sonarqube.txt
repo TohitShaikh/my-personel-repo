@@ -12,7 +12,7 @@ yum install wget -y
 
 yum install unzip -y
 
- sudo yum install java-17-openjdk -y
+sudo yum install java-17-openjdk -y
 
 wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-9.9.3.79811.zip
 
