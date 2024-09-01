@@ -1,0 +1,24 @@
+---
+- hosts: all
+#By adding the following command we will run the script using root priviligies
+  become: true
+  vars: 
+   machine: RHEL
+   version: 8
+  tasks: 
+  - name: Install Apache HTTP Server
+    yum: 
+     name: httpd
+     state: latest
+  - name:
+  #We will use template module to get values from variables instead of copy module  
+    template: 
+     src: index.html 
+     dest: /var/www/html/index.html
+#After Installing the Apache server we are starting the apache server      
+  - name: Start the Apache Server
+    service: 
+     name: httpd
+     state: started
+     enabled: true
+...
