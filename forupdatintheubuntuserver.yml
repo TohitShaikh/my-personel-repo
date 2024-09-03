@@ -1,8 +1,0 @@
----
-- hosts:
-  become: true
-  tasks: 
-  - name: 
-    apt: 
-     update_cache: yes
-...     

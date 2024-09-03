@@ -1,9 +1,0 @@
----
-- hosts:
-  vars:
-   name: Cloudage 
-  tasks: 
-  - name: Display the name variable value
-    debug:
-     msg: "The variable name value is: {{name}}"
-...

@@ -1,0 +1,25 @@
+---
+- hosts: all
+#By adding the following command we will run the script using root priviligies
+  become: true
+  vars: 
+   machine: RHEL
+   version: 8
+  tasks: 
+  - name: Install Apache HTTP Server
+    yum: 
+     name: httpd
+     state: latest
+  - name:
+    template: 
+     src: index.html
+     dest: /var/www/html/index.html
+    notify:
+    - Re-Start the Apache Server
+  handlers:
+  - name: Re-Start the Apache Server
+    service: 
+     name: httpd
+     state: restarted
+     enabled: true
+...

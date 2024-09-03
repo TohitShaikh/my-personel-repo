@@ -1,8 +1,0 @@
----
-- hosts:
-  become: true
-  tasks: 
-  - name: Install list of packages
-    yum: 
-     name: ['git', 'httpd', 'tree', 'unzip', 'wget']
-...

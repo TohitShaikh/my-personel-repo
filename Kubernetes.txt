@@ -11,8 +11,9 @@ sudo su -
 2#Disabling Swap Memory
 because kubernetes official documentation refers to disabliiing it 
 Swap Memory - The data which is avaible n the ram and after the ram is full we swap the data of ram in the system storage
-swapoff -a
-sed -i / 'swap / s/^\(.*\)$/#\1/g' /etc/fstab
+swapoff -a 
+sed -i '/swap/s/^\(.*\)$/#\1/' /etc/fstab
+
 
 3#Install packages. To install Kubernetes and containerd run these commands
 sudo apt update && sudo apt upgrade -y
@@ -91,7 +92,8 @@ kubectl get nodes
 
 kubectl get pods -n kube-system -o wide 
 
-#You will notice from the previous command, that all the pods are running except one: ‘kube-dns’. For resolving this we will install a # pod network. To install the weave pod network, run the following command:
+#You will notice from the previous command, that all the pods are running except one: ‘kube-dns’. For resolving this we will install a # pod network. 
+To install the weave pod network, run the following command:
 
 kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
 
@@ -162,6 +164,7 @@ kubectl get pods -n test-ns
 
 kubectl describe pods maven-webapp-pod  ---> it will show error because bt default it will search the pod in the default 
                                                namespace
+kubectl describe node <node-name>
 
 kubectl describe pods maven-webapp-pod -n test-ns
 
@@ -170,6 +173,7 @@ kubectl delete pod  maven-webapp-pod
 Lec5(Service)-------------------------------------------------------------------------------------------------------------
 vi service.yml
 
+#Template for service
 apiVersion: v1
 kind: Service
 metadata:  
