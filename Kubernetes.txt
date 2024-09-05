@@ -22,6 +22,7 @@ sudo apt-get install -y apt-transport-https ca-certificates curl gpg
 
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
+#If the above command fail or show a error only that time we need to run these below two command 
 sudo mkdir -p -m 755 /etc/apt/keyrings
 
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
@@ -29,6 +30,7 @@ curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --
 echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
 sudo apt-get update
+
 sudo apt-get install -y kubelet kubeadm kubectl containerd
 
 #apt-mark will hold prevent the package from being automatically upgraded or remove
@@ -148,9 +150,9 @@ apiVersion: v1
 kind: Pod
 metadata: 
   name: maven-webapp-pod
+  namespace: test-ns
   labels: 
    app: maven-webapp
-  namespace: test-ns
 spec: 
   containers: 
   - name: maven-webapp-container
@@ -187,6 +189,20 @@ spec:
  - port: <Service-Port>  #On which port the service should accept the traffic
    targetPort: <Container-Port>
 
+#Actual script
+apiVersion: v1
+kind: Service
+metadata: 
+ name: maven-webapp-service
+ namespace: test-ns
+spec: 
+ type: ClusterIP
+ selector: 
+  app: webapp
+ ports: 
+ - port: 80
+   targetPort: 8080
+
 
 kubectl apply -f service.yml 
 
@@ -196,7 +212,7 @@ kubectl describe svc -n test-ns
 
 kubectl get pods --show-labels -n test-ns
 
-#T check if the srvice which we have attached to the pod is working or not
+#To check if the srvice which we have attached to the pod is working or not
 curl -v <serviceip>:<port>/maven-web-application/
 
 Take the ip of your service and access the pod  from the worker node 
@@ -218,8 +234,9 @@ spec:
        
 kubectl apply -f nodejs.yml
 
-kubectl get all -n test-ns  
-#to connect to the container inside the pod
+kubectl get all -n test-ns 
+ 
+#To connect to the container inside the pod
 kubectl exec -it nodejs-pod -n test-ns -- sh
 
 #Craeting a nodeport service to access the applicatiion from outside the cluster
@@ -251,6 +268,6 @@ NAME                           TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)
 service/maven-webapp-service   NodePort   10.106.232.132   <none>        80:30972/TCP   21h
 
 
-take the server ip and access the conatiner ising the nodeport port
+take the server ip and access the conatiner using the nodeport port
 
 http://65.2.130.87:30972/maven-web-application/
