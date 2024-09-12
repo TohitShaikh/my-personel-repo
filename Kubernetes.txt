@@ -11,7 +11,7 @@ sudo su -
 2#Disabling Swap Memory
 because kubernetes official documentation refers to disabliiing it 
 Swap Memory - The data which is avaible n the ram and after the ram is full we swap the data of ram in the system storage
-swapoff -a 
+swapoff -a
 sed -i '/swap/s/^\(.*\)$/#\1/' /etc/fstab
 
 
@@ -29,7 +29,7 @@ curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --
 
 echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
-sudo apt-get update
+sudo apt-get update -y
 
 sudo apt-get install -y kubelet kubeadm kubectl containerd
 
@@ -99,7 +99,7 @@ To install the weave pod network, run the following command:
 
 kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
 
-/
+kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s-1.11.yaml
 
 kubectl get pods --all-namespaces
 
@@ -107,6 +107,7 @@ kubectl get pods --all-namespaces
 
 kubeadm token create --print-join-command  -----> After taking the token run the token in the worker node 
 
+#If you are not able to join worker nodes into the control plane just edit the security group and add rule "All Tcp and give the vpc range"
 Lec3----------------------------------------------------------------------------------------------------------------------
 
 #To get info about the namespace 
@@ -289,7 +290,7 @@ spec:
     ports: 
     - containerPort: 8080
 
-sudo cp static-pod.yml in /etc/kubernetes/manifests/ -->After coping the file to this location /etc/kubernetes/manifests/ we
+sudo cp static-pod.yml /etc/kubernetes/manifests/ -->After coping the file to this location /etc/kubernetes/manifests/ we
                                                         be able to a pod running 
 
 sudo rm static-pod.yml in /etc/kubernetes/manifests/ -->For deleting it 
@@ -342,7 +343,9 @@ spec:
 
 kubectl apply -f replication-controller.yml --dry-run=client
 
-Lec(Replicaset & Darmonset)--------------------------------------------------------------------------------------------
+kubectl apply -f replication-controller.yml
+
+Lec(Replicaset & Daemonset)--------------------------------------------------------------------------------------------
 vi replicaset-demo.yml
 apiVersion: apps/v1
 kind: ReplicaSet
