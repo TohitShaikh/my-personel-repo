@@ -408,3 +408,5 @@ spec:
      image: nginx
      ports: 
      - containerPort: 80
+
+Lec8(Deployment & Deployment strategies)-------------------------------------------------------------------------------------------------------
