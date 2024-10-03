@@ -345,7 +345,7 @@ kubectl apply -f replication-controller.yml --dry-run=client
 
 kubectl apply -f replication-controller.yml
 
-Lec(Replicaset & Daemonset)--------------------------------------------------------------------------------------------
+Lec7(Replicaset & Daemonset)--------------------------------------------------------------------------------------------
 vi replicaset-demo.yml
 apiVersion: apps/v1
 kind: ReplicaSet
@@ -410,3 +410,69 @@ spec:
      - containerPort: 80
 
 Lec8(Deployment & Deployment strategies)-------------------------------------------------------------------------------------------------------
+
+vi deployment.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+ name: demo-deployment
+ labels: 
+  app: demo
+spec: 
+ replicas: 2
+ strategy: 
+  type: Recreate
+ selector: 
+  matchLables: 
+   app: demo
+ template: 
+  metadata: 
+   name: demo-pod
+   labels: 
+    app: demo
+  spec: 
+   containers: 
+   - name: demo-container
+     image: dockerhandson/maven-web-application:2
+     ports: 
+     - containerPort: 8080
+
+kubectl apply -f deployment.yml --dry-run=client
+
+kubectl apply -f deployment.yml
+
+#To check the status of deployment as if ti is deployed successfully
+kubectl rollout status deployment <deployment_name> -n <namespace_name>
+
+#To check history of deployment / to check which version is deployed
+kubectl rollout history deployment <deployment_name> -n <namespace_name>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
