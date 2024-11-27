@@ -494,8 +494,119 @@ kubectl apply -f deployment-rollingupdate.yml
 kubectl apply -f deployment-rollingupdate.yml --record=true
 
 
-#After running above command see the change in the cluster new pod will be crated Change
+#After running above command see the change in the cluster new pod will be created Change
 kubectl rollout history deployment demo-deployment -n test-ns
+
+Lec5(Pod Autoscaler)---------------------------------------------------------------------------------------------------------------------------------------------------
+
+#Rather downloading it from website we will bring that file in local laptop and edit it accordingly and share it to server and then use it 
+
+#We are intalling metric server but before installation we need to change some configuration so that it can run.
+
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+#Check if the metric server is running or not
+kubectl top pod -A
+
+#Deploy a sample application with deployment
+
+vi hpadeployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: hpadeployment
+ namespace: test-ns
+ labels:
+  name: hpapod
+spec:
+ replicas: 2
+ selector:
+  matchLabels:
+   name: hpapod
+ template:
+  metadata:
+   labels:
+    name: hpapod
+  spec:
+   containers:
+    - name: hpacontainer
+      image: k8s.gcr.io/hpa-example
+      ports:
+      - name: http
+        containerPort: 80
+      resources:
+        requests:
+         cpu: "100m"
+         memory: "64Mi"  # Corrected here
+        limits:
+         cpu: "100m"
+         memory: "256Mi"  # Corrected here
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: hpaclusterservice
+ namespace: test-ns
+ labels:
+  name: hpaservice
+spec:
+ ports:
+  - port: 80
+    targetPort: 80
+ selector:
+  name: hpapod
+ type: NodePort
+
+#We will create a pod with busybox container to test if our load is getting distributed or not or to watch utilization of resources on node
+
+kubectl run load-generator -i --tty --rm --image=busybox -n test-ns -- /bin/sh
+
+#After connecting to the container we will check if th application is reponding
+wget -qO- http://hpaclusterservice
+
+#We will put load on the conatainer to observe the resources utilization 
+while true; do wget -q -O- http://hpaclusterservice; done
+
+#We will create a kubernetes object/resource(HPA) for the deployment to horizontally scale the the pod on observe resorce utilization
+
+vi pod-autoscaler.yml
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: 
+ name: hpa-autoscaler
+ namespace: test-ns
+spec: 
+ scaleTargetRef: 
+  apiVersion: apps/v1
+  kind: Deployment
+  name: hpadeployment
+ minReplicas: 2
+ maxReplicas: 5
+ metrics: 
+ - type: 
+   resource: 
+    name: cpu
+    target: 
+     type: Utilization
+     averageUtilization: 40
+ - type: 
+   resource: 
+    name: memory
+    target: 
+     type: Utilization
+     averageUtilization: 40
+
+#After creating the pod autoscaler we will create a temprary pod to test if the pod auto scaler is working or not and run a query
+
+kubectl run load-generator -i --tty --rm --image=busybox -n test-ns -- /bin/sh
+
+while true; do wget -q -O- http://hpaclusterservice; done
+
+
+
+
 
 
 
