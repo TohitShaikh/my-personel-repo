@@ -1,7 +1,7 @@
-Lauch 3 Ec2 instance with Ubuntu Server ----------------------------------------------------------------------------------
+Lauch 4 Ec2 instance with Ubuntu Server ----------------------------------------------------------------------------------
 
-1 -Master t2.medium
-2 Worker t2.micro
+1 Master t2.medium
+3 Worker t2.micro
 
 Connect to 3 machine -----------------------------------------------------------------------------------------------------
 --------------------------------------------COMMON FOR MASTER & SLAVES(Pre-Requisite START)----------------------------------------------------
@@ -585,13 +585,13 @@ spec:
  minReplicas: 2
  maxReplicas: 5
  metrics: 
- - type: 
+ - type: Resources
    resource: 
     name: cpu
     target: 
      type: Utilization
      averageUtilization: 40
- - type: 
+ - type: Resources
    resource: 
     name: memory
     target: 
@@ -659,7 +659,7 @@ spec:
   ports:
   - port: 80
     targetPort: 8080
-        
+---       
 #We are craeting replicaset for database 
 
 apiVersion: apps/v1
@@ -812,12 +812,290 @@ kubectl apply -f spring-volume.yml
 #After applying the volume we will check of the volume is attached successfully or not
 kubectl describe pod mongodb-7sdzw -n test-ns
 
-#Connect to the machine which the pod is scdule and observe that the there directory will be created
-ssh 
+#Connect to the machine which the pod is schedule and observe that the there directory will be created
 
+#We will create nfs server  on our ec2 intance so it will act as a database 
 
+sudo apt update && sudo apt upgrade -y
 
+sudo mkdir -p /mnt/nfs_share -->This is the share directory which will be used to share with client machine
 
+sudo chmod 777 /mnt/nfs_share --> We will change permission becauese it  will accessible by remote client machine
 
+sudo chown -R nobody:nogroup /mnt/nfs_share
 
+sudo vi /mnt/nfs_share -->Open this file and add the below data because the file will be accessed by remote user/machine
 
+/mnt/nfs_share *(rw,sync,no_subtree_check,no_root_squash)
+
+#After saving the above file run below command
+
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+
+#We will install nfs on all the nodes in the cluster
+sudo apt install nfs-common -y
+
+#To use nfs sever in the pod we need to specify the nfs configuration in the pod manifest
+
+vi spring-nfs-volume.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns  # You can change this to your desired namespace
+  labels:
+    app: springapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1  #This application will communicate with another application like database so we will pass arguments (host, passwords.)
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1 #We need a service to access above application
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+  labels:
+    app: mongodb
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts: 
+        - name: mongodb-host-volume
+          mountPath: /data/db
+      volumes: 
+      - name: mongodb-host-volume
+        nfs: 
+         server: 172.31.17.82 
+         path: /mnt/nfs_share
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort:  27017
+
+kubectl apply -f spring-nfs-volume.yml
+
+#After apply the above file we will observer in the nfs_server there files will be created
+
+Lec11(PersistentVolume && PersistentVolumeClaim)-----------------------------------------------------------------------------------------------------------------------
+
+#For understanding and first time we will purposly create every resources step by step for understanding purpose
+
+vi spring-pvc.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns  # You can change this to your desired namespace
+  labels:
+    app: springapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1  #This application will communicate with another application like database so we will pass arguments (host, passwords.)
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1 #We need a service to access above application
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+  labels:
+    app: mongodb
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts: 
+        - name: mongodb-host-volume
+          mountPath: /data/db
+      volumes: 
+      - name: mongodb-host-volume
+        persistentVolumeClaim: 
+         claimName: mongopvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+ name: mongopvc
+ namespace: test-ns
+spec: 
+ resources: 
+  request: 
+   storage: 1Gi
+ accessModes: 
+ - ReadWriteOnce
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort:  27017
+
+kubectl apply -f spring-pvc.yml
+
+kubeclt describe pvc spring-pvc.yml -n test-ns
+
+vi nfs_pv.yml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata: 
+ name: nfs-pv
+ namespace: test-ns
+spec: 
+ capacity: 
+   storage: 1Gi
+ accessModes: 
+ - ReadWriteMany
+ nfs: 
+  server: 172.31.17.82 
+  path: /mnt/nfs_share
+
+kubectl apply -f nfs_pv.yml
+
+kubectl get pv -n test-ns
+
+#After creating the PV it will not be associated with any PVC because of diffrent accessmode 
+
+#We will create a hostpath pv and will associate it with pvc for just demo purpose
+
+vi hostpath_pv.yml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata: 
+ name: hostpath-pv
+ namespace: test-ns
+spec: 
+ capacity: 
+   storage: 2Gi
+ accessModes: 
+ - ReadWriteOnce
+ hostPath
+  path: /mongo-db-data
