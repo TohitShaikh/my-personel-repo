@@ -942,7 +942,7 @@ kubectl apply -f spring-nfs-volume.yml
 
 #After apply the above file we will observer in the nfs_server there files will be created
 
-Lec11(PersistentVolume && PersistentVolumeClaim)-----------------------------------------------------------------------------------------------------------------------
+Lec12(PersistentVolume && PersistentVolumeClaim)-----------------------------------------------------------------------------------------------------------------------
 
 #For understanding and first time we will purposly create every resources step by step for understanding purpose
 
@@ -1099,3 +1099,9 @@ spec:
  - ReadWriteOnce
  hostPath
   path: /mongo-db-data
+
+kubectl apply -f hostpath_pv.yml
+ 	
+kubectl get pv
+
+Lec13()---------------------------------------------------------------------------------------------------------------------------------------------------------------
