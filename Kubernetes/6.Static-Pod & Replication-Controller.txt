@@ -1,0 +1,72 @@
+Lec6(Replication-Controller)-------------------------------------------------------------------------------------------------------------------------------------------
+Static-Pod------------------------------------------------------------------------------------------------------------------------------------------------------------
+vi static-pod
+
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: static-pod
+  namespace: test-ns
+  labels: 
+   app: static-pod
+spec: 
+  containers: 
+  - name: maven-webapp-container
+    image: tohitshaikh/jenkins-image
+    ports: 
+    - containerPort: 8080
+
+sudo cp static-pod.yml /etc/kubernetes/manifests/ -->After coping the file to this location /etc/kubernetes/manifests/ we
+                                                        be able to a pod running 
+
+sudo rm static-pod.yml in /etc/kubernetes/manifests/ -->For deleting it 
+
+vi replication-controller.yml
+#Template
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: <ReplicationController-Name>
+  namespace: <Namespace-Name>
+  labels: 
+    <key>: <value>
+spec: 
+ replicas: <No. of pod replicas>
+ template: #Pod template You specify your pod details in under template section
+   metadata: 
+    name: <Pod-Name>
+    labels: 
+     <key>: <value>
+   spec: 
+    containers: 
+    - name: <container-name>
+      image: <image-name>
+      ports: 
+      - containerPort: <Container-Port>
+
+#Actual Script
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: maven-web-app-rc
+  namespace: tes-ns
+  labels: 
+    name: rc-test
+spec: 
+ replicas: 2
+ selector: 
+   app: rc-pod
+ template: #Pod template You specify your pod details in under template section
+   metadata: 
+    labels: 
+     app: rc-pod
+   spec: 
+    containers: 
+    - name: maven-rc-container
+      image: dockerhandson/maven-web-application:1
+      ports: 
+      - containerPort: 8080
+
+kubectl apply -f replication-controller.yml --dry-run=client
+
+kubectl apply -f replication-controller.yml

@@ -1,0 +1,20 @@
+Lec3(Namespace)--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#To get info about the namespace 
+kubectl get namespace
+
+vi test-ns.yml
+apiVersion: v1
+kind:  Namespace
+metadata: 
+ name: test-ns
+ labels: 
+  teamname: testing
+
+#To run the manifestfile 
+kubectl apply -f test-ns.yml
+
+kubectl get namespace
+
+
+kubectl get all --all-namespaces

@@ -1,0 +1,69 @@
+Lec7(Replicaset & Daemonset)-------------------------------------------------------------------------------------------------------------------------------------------
+vi replicaset-demo.yml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+ name: replicaset-demo
+ namespace: test-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+     app: rs-demo
+  template:
+    metadata:
+     labels:
+      app: rs-demo
+    spec:
+      containers:
+      - name: replicaset-demo
+        image: dockerhandson/node-app-mss:1
+        ports:
+         - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: replicaset-demo
+ namespace: test-ns
+spec:
+ type:NodePort
+ selector:
+  app: rs-demo
+ ports:
+ - port: 80
+   targetPort: 9981
+
+kubectl apply -f replicaset-demo.yml --dry-run=server
+
+kubectl apply -f replicaset-demo.yml
+
+#For forcefully deleting the resources
+kubectl delete rs replicaset-demo -n test-ns --force --grace-period=0
+(DaemonSet)-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+vi daemonset-demo.yml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata: 
+ name: daemonset-demo
+ namespace: test-ns
+spec: 
+ selector: 
+  matchLabels: 
+   app: demo
+ template: 
+  metadata: 
+   labels: 
+    app: demo
+  spec: 
+   containers: 
+   - name: daemonset-demo-container
+     image: nginx
+     ports: 
+     - containerPort: 80
+
+kubectl apply -f daemonset-demo.yml --dry-run=server
+
+kubectl apply -f daemonset-demo.yml

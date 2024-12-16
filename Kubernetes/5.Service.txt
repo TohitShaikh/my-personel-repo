@@ -1,0 +1,100 @@
+Lec(Service)-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+vi service.yml
+
+#Template for service
+apiVersion: v1
+kind: Service
+metadata:  
+  name: <service-name>
+  namespace: <ns-name>
+spec: 
+ type: <ClusterIP/NodePort/Loadbalncer>
+ selector:                         #Pod Label as selector	
+   <Pod-label-key>: <Pod-label-value>
+ ports: 
+ - port: <Service-Port>  #On which port the service should accept the traffic
+   targetPort: <Container-Port>
+
+#Actual script
+apiVersion: v1
+kind: Service
+metadata: 
+ name: maven-webapp-service
+ namespace: test-ns
+spec: 
+ type: ClusterIP
+ selector: 
+  app: webapp
+ ports: 
+ - port: 80
+   targetPort: 8080
+
+
+kubectl apply -f service.yml 
+
+kubectl describe svc -n test-ns
+
+#To get the Information of labels attached to the pod
+
+kubectl get pods --show-labels -n test-ns
+
+#To check if the srvice which we have attached to the pod is working or not
+curl -v <serviceip>:<port>/maven-web-application/
+
+Take the ip of your service and access the pod  from the worker node 
+#Create a nodejs pod 
+vi nodejs.yml
+apiVersion: v1
+kind: Pod
+metadata: 
+ name: nodejs-pod
+ namespace: test-ns
+ labels: 
+   app: nodeapp
+spec: 
+ containers: 
+  - name: node-app-container
+    image: dockerhandson/node-app-mss:1
+    ports: 
+      - containerPort: 9981
+       
+kubectl apply -f nodejs.yml
+
+kubectl get all -n test-ns 
+ 
+#To connect to the container inside the pod
+kubectl exec -it nodejs-pod -n test-ns -- sh
+
+#Craeting a nodeport service to access the applicatiion from outside the cluster
+vi nodeport-service.yml
+
+
+apiVersion: v1
+kind: Service
+metadata:   
+ name: maven-webapp-service
+ namespace: test-ns
+spec: 
+ type: NodePort
+ selector: 
+  app: maven-web-app
+ ports: 
+ - port: 80
+   targetPort: 8080
+    
+kubectl apply -f nodeport-service.yml 
+
+kubectl get all -n test-ns
+output -->
+NAME                   READY   STATUS    RESTARTS      AGE
+pod/maven-webapp-pod   1/1     Running   1 (55m ago)   21h
+pod/nodejs-pod         1/1     Running   0             20m
+
+NAME                           TYPE       CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE
+service/maven-webapp-service   NodePort   10.106.232.132   <none>        80:30972/TCP   21h
+
+
+take the server ip and access the conatiner using the nodeport port
+
+http://100.27.187.183:32676/maven-web-application/

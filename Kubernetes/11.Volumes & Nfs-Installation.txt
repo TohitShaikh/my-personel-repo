@@ -1,0 +1,339 @@
+Lec11(Volumes)---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#We are creating a deployement with a database attached
+
+vi spring.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns  # You can change this to your desired namespace
+  labels:
+    app: springapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1  #This application will communicate with another application like database so we will pass arguments (host, passwords.)
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1 #We need a service to access above application
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---       
+#We are craeting replicaset for database 
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+  labels:
+    app: mongodb
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort:  27017
+
+kubectl apply -f spring.yml 
+
+#As we have configured 1 replica in our mongo database replicaset so for any reason it goes then there is data loss
+
+#For our existing script of database and web application we will add volumes to database
+
+vi sprong-volume.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns  # You can change this to your desired namespace
+  labels:
+    app: springapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1  #This application will communicate with another application like database so we will pass arguments (host, passwords.)
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1 #We need a service to access above application
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+  labels:
+    app: mongodb
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts: 
+        - name: mongodb-host-volume
+          mountPath: /data/db
+      volumes: 
+      - name: mongodb-host-volume
+        hostPath: 
+         path: /mongodata
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort:  27017
+
+kubectl apply -f spring-volume.yml
+
+#After applying the volume we will check of the volume is attached successfully or not
+kubectl describe pod mongodb-7sdzw -n test-ns
+
+#Connect to the machine which the pod is schedule and observe that the there directory will be created
+(Nfs_Intallation)
+#We will create nfs server  on our ec2 intance so it will act as a database 
+
+sudo apt update && sudo apt upgrade -y
+
+sudo apt install nfs-kernel-server -y
+
+sudo mkdir -p /mnt/nfs_share -->This is the share directory which will be used to share with client machine
+
+sudo chmod 777 /mnt/nfs_share --> We will change permission becauese it  will accessible by remote client machine
+
+sudo chown -R nobody:nogroup /mnt/nfs_share
+
+sudo vi /mnt/nfs_share -->Open this file and add the below data because the file will be accessed by remote user/machine
+
+/mnt/nfs_share *(rw,sync,no_subtree_check,no_root_squash)
+
+#After saving the above file run below command
+
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+
+#We will install nfs on all the nodes in the cluster
+sudo apt install nfs-common -y
+
+#To use nfs sever in the pod we need to specify the nfs configuration in the pod manifest
+
+vi spring-nfs-volume.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns  # You can change this to your desired namespace
+  labels:
+    app: springapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1  #This application will communicate with another application like database so we will pass arguments (host, passwords.)
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1 #We need a service to access above application
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+  labels:
+    app: mongodb
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts: 
+        - name: mongodb-host-volume
+          mountPath: /data/db
+      volumes: 
+      - name: mongodb-host-volume
+        nfs: 
+         server: 172.31.17.82 
+         path: /mnt/nfs_share
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort:  27017
+
+kubectl apply -f spring-nfs-volume.yml
+
+#After apply the above file we will observer in the nfs_server there files will be created

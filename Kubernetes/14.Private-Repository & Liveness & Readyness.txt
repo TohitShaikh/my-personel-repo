@@ -1,0 +1,150 @@
+Lec14(Private-Repository & Liveness & Readyness)----------------------------------------------------------------------------------------------------------------------
+
+#Pulling image from private repository
+
+vi private-repo-demo.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+ name: private-repo-demo
+ namespace: test-ns
+ labels: 
+  app: demo
+spec: 
+ replicas: 1
+ selector: 
+  matchLabels: 
+   app: demo
+ template: 
+  metadata: 
+   name: demo-pod
+   labels: 
+    app: demo
+  spec: 
+   containers: 
+   - name: demo-container
+     image: tohitshaikh/jenkins-image:latest
+     ports: 
+     - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: private-repo-svc
+ namespace: test-ns
+spec:
+ type: NodePort
+ selector:
+  name: demo-pod
+ ports:
+ - port: 80
+   targetPort: 8080
+
+kubectl apply -f private-repo-demo.yml
+
+#After appplying the file it will show error in the the pod status 
+
+#We will create a secret of docker type and refer it in manifest
+
+#Create a Secret by providing credentials on the command line
+
+kubectl create secret docker-registry dockerhubcred --docker-server=https://index.docker.io/v1/ --docker-username=tohitshaikh --docker-password=Tohit8390# --docker-email=test@gmail.com --namespace=test-ns
+
+#Will update in the file with imagepullsecret
+vi private-repo-demo.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+ name: private-repo-demo
+ namespace: test-ns
+ labels: 
+  app: demo
+spec: 
+ replicas: 1
+ selector: 
+  matchLabels: 
+   app: demo
+ template: 
+  metadata: 
+   name: demo-pod
+   labels: 
+    app: demo
+  spec: 
+   containers: 
+   - name: demo-container
+     image: tohitshaikh/jenkins-image:latest
+     ports: 
+     - containerPort: 8080
+   imagePullSecrets: 
+   - name: dockerhubcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: private-repo-svc
+ namespace: test-ns
+spec:
+ type: NodePort
+ selector:
+  name: demo-pod
+ ports:
+ - port: 80
+   targetPort: 8080
+
+Liveness & Readyness ------------------------------------------------------------------------------------------------------------------------------------------------
+
+#As we will not able to create deadlock situation or momory leaakgae 
+
+vi test-application.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+ name: test-app
+ namespace: test-ns
+ labels: 
+  app: test
+spec: 
+ replicas: 2
+ selector: 
+  matchLabels: 
+   app: test
+ template: 
+  metadata: 
+   name: demo-pod
+   labels: 
+    app: test
+  spec: 
+   containers: 
+   - name: demo-container
+     image: dockerhandson/mavenwebapplication:1
+     ports: 
+     - containerPort: 808
+---
+apiVersion: v1
+kind: Service
+metadata:
+ name: test-svc
+ namespace: test-ns
+spec:
+ type: NodePort
+ selector:
+  app: test
+ ports:
+ - port: 80
+   targetPort: 8080
+
+kubectl apply -f test-application.yml
+
+kubectl get all -n test-ns
+
+#We will check the application and we will be receiving traffic from both the pod
+curl -v 10.98.166.17/maven-web-application/
+
+#As we will not able to create deadlock situation or momory leakage we will intentionally delete war file from tje pod/container
+
+kubectl exec test-app-6946659b4f-n4wcm -n test-ns -- ls /usr/local/tomcat/webapps
+
+kubectl exec test-app-6946659b4f-n4wcm -n test-ns -- rm /usr/local/tomcat/webapps/maven-web-application.war

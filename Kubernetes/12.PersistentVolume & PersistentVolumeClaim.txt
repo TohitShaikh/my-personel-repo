@@ -1,0 +1,159 @@
+#For understanding and first time we will purposly create every resources step by step for understanding purpose
+
+vi spring-pvc.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns  # You can change this to your desired namespace
+  labels:
+    app: springapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1  #This application will communicate with another application like database so we will pass arguments (host, passwords.)
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1 #We need a service to access above application
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+  labels:
+    app: mongodb
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts: 
+        - name: mongodb-host-volume
+          mountPath: /data/db
+      volumes: 
+      - name: mongodb-host-volume
+        persistentVolumeClaim: 
+         claimName: mongopvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: 
+ name: mongopvc
+ namespace: test-ns
+spec: 
+ resources: 
+  request: 
+   storage: 1Gi
+ accessModes: 
+ - ReadWriteOnce
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort:  27017
+
+kubectl apply -f spring-pvc.yml
+
+kubeclt describe pvc spring-pvc.yml -n test-ns
+
+vi nfs_pv.yml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata: 
+ name: nfs-pv
+ namespace: test-ns
+spec: 
+ capacity: 
+   storage: 1Gi
+ accessModes: 
+ - ReadWriteMany
+ nfs: 
+  server: 172.31.17.82 
+  path: /mnt/nfs_share
+
+kubectl apply -f nfs_pv.yml
+
+kubectl get pv -n test-ns
+
+#After creating the PV it will not be associated with any PVC because of diffrent accessmode 
+
+#We will create a hostpath pv and will associate it with pvc for just demo purpose
+
+vi hostpath_pv.yml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata: 
+ name: hostpath-pv
+ namespace: test-ns
+spec: 
+ capacity: 
+   storage: 2Gi
+ accessModes: 
+ - ReadWriteOnce
+ hostPath
+  path: /mongo-db-data
+
+kubectl apply -f hostpath_pv.yml
+ 	
+kubectl get pv

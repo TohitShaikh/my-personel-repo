@@ -1,0 +1,43 @@
+Lec4(PODS)-------------------------------------------------------------------------------------------------------------------------------------------------------------
+vi Pods.yml 
+#Template
+apiVersion: v1
+kind: Pod
+metadata: 
+ name: <podname>
+ namespace: <namespace-name>
+ labels: 
+   <key>: <value>
+spec: 
+ container: 
+ - name: <container-name>
+   image: <imageName>
+   ports: 
+   - containerPort: <containerPort>
+
+#Acual script
+apiVersion: v1
+kind: Pod
+metadata: 
+  name: maven-webapp-pod
+  namespace: test-ns
+  labels: 
+   app: maven-webapp
+spec: 
+  containers: 
+  - name: maven-webapp-container
+    image: dockerhandson/maven-web-application:1
+    ports: 
+    - containerPort: 8080
+
+kubectl apply -f Pod.yml --dry-run=client
+
+kubectl get pods -n test-ns
+
+kubectl describe pods maven-webapp-pod  ---> it will show error because bt default it will search the pod in the default 
+                                               namespace
+kubectl describe node <node-name>
+
+kubectl describe pods maven-webapp-pod -n test-ns
+
+kubectl delete pod  maven-webapp-pod -n test-ns
