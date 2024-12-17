@@ -1642,7 +1642,7 @@ spec:
 kubectl apply -f configMap-Secret-springapp.yml 
 #After running above file it will the username from configMap and password from secret
 
-Lec14(Private Repository & Liveness & Readyness)-------------------------------------------------------------------------------------------------------------------------------------------
+Lec14(Private-Repository & Liveness & Readyness)----------------------------------------------------------------------------------------------------------------------
 
 #Pulling image from private repository
 
@@ -1789,6 +1789,6 @@ curl -v 10.98.166.17/maven-web-application/
 
 #As we will not able to create deadlock situation or momory leakage we will intentionally delete war file from tje pod/container
 
-kubectl exec test-app-6946659b4f-n4wcm -n test-ns -- ls /usr/local/tomcat/webapps
+kubectl exec test-app-6946659b4f-rfrcl -n test-ns -- ls /usr/local/tomcat/webapps
 
 kubectl exec test-app-6946659b4f-n4wcm -n test-ns -- rm /usr/local/tomcat/webapps/maven-web-application.war
