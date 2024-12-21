@@ -1,0 +1,87 @@
+Lec(Deployment)-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+vi deployment-recreate.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+ name: demo-deployment
+ namespace: test-ns
+ labels: 
+  app: demo
+spec: 
+ replicas: 2
+ strategy: 
+  type: Recreate
+ selector: 
+  matchLables: 
+   app: demo
+ template: 
+  metadata: 
+   name: demo-pod
+   labels: 
+    app: demo
+  spec: 
+   containers: 
+   - name: demo-container
+     image: dockerhandson/maven-web-application:2
+     ports: 
+     - containerPort: 8080
+
+kubectl apply -f deployment.yml --dry-run=client
+
+kubectl apply -f deployment.yml
+
+#To check the status of deployment as if ti is deployed successfully
+kubectl rollout status deployment <deployment_name> -n <namespace_name>
+
+#To check history of deployment / to check which version is deployed
+kubectl rollout history deployment <deployment_name> -n <namespace_name>
+
+#To check detailed history of the revision/histroy
+kubectl rollout history deployment <deployment_name> -n test-ns --revision <revsion_number>
+
+#To go back to previous version or rollback to previous version
+kubectl rollout undo deployment demo-deployment -n test-ns
+
+#PollingUpdate Practical
+
+vi deployment-rollingupdate.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: demo-deployment
+ namespace: test-ns
+spec:
+ replicas: 2
+ revisionHistoryLimit: 5
+ strategy:
+  type: RollingUpdate
+  rollingUpdate:
+   maxUnavailable: 1
+   maxSurge: 1
+ minReadySeconds: 30
+ selector:
+  matchLabels:
+   app: demo
+ template:
+  metadata:
+   name: demo-deployment-pod
+   labels:
+    app: demo
+  spec:
+   containers:
+   - name: demo-container
+     image: dockerhandson/maven-web-application:15
+     ports:
+     - containerPort: 8080
+
+kubectl apply -f deployment-rollingupdate.yml
+
+#To see the changes in deployment or to see if the rollingUpdate is working properly or not in the cluster we need to update(change the image tag to 20 and reapply it) manifest file to see the changes
+kubectl apply -f deployment-rollingupdate.yml --record=true
+
+
+#After running above command see the change in the cluster new pod will be created Change
+kubectl rollout history deployment demo-deployment -n test-ns

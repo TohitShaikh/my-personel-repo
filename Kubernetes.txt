@@ -229,7 +229,7 @@ metadata:
 spec: 
  containers: 
   - name: node-app-container
-    image: dockerhandson/node-app-mss:1
+    image: 1
     ports: 
       - containerPort: 9981
        
@@ -272,7 +272,8 @@ service/maven-webapp-service   NodePort   10.106.232.132   <none>        80:3097
 take the server ip and access the conatiner using the nodeport port
 
 http://100.27.187.183:32676/maven-web-application/
-Lec6(Replication-Controller)----------------------------------------------------------------------------------------------------------------
+Lec6(Static-Pod & Replication-Controller)----------------------------------------------------------------------------------------------------------------
+
 Static-Pod
 vi static-pod
 

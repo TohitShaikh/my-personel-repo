@@ -1,0 +1,160 @@
+Lec15(StatefullSet)--------------------------------------------------------------------------------------------------------------------------------------------------
+
+vi statefulSet.yml
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongod
+  namespace: test-ns
+spec:
+  serviceName: mongodb-service
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mongod
+  template:
+    metadata:
+      labels:
+        app: mongod
+    spec:
+      terminationGracePeriodSeconds: #When it is deleting the pod how many seconds it will waits in reverse order.
+      containers:
+      - name: comgocontainer
+        image: mongo:5.0
+        command:
+        - "mongod"
+        - "--bind_ip"
+        - "0.0.0.0"
+        - "--replSet"
+        - "MainRepSet"
+        resources:
+         requests:
+          cpu: 200m
+          memory: 128Mi
+         limits:
+          cpu: 200m
+          memory: 256Mi
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongodb-persistent-storage-claim
+          mountPath: "data/db"
+  volumeClaimTemplates:
+  - metadata:
+      name: mongodb-persistent-storage-claim
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  namespace: test-ns
+spec:
+  clusterIP: None  # This makes it a Headless Service
+  selector:
+    app: mongod
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+kubectl apply -f statefulSet.yml
+
+kubectl get all -n test-ns
+
+kubectl get pvc -n test-ns
+ 
+kubectl get pv
+
+kubectl get statefulset -n test-ns
+
+kubectl describe statefulset -n test-ns
+
+#We will connect to one of the pod make primary & secondary database
+
+kubectl exec -it mongod-0 -n test-ns -- sh 
+
+#Connect to mongo shell by using below command
+mongo
+
+#Status of databse
+rs.status();
+
+#Initiate mongod db reple set and add members
+rs.initiate({
+  _id: "MainRepSet", // Replace "MainRepSet" with your desired replica set name
+  members: [
+    { _id: 0, host: "mongod-0.mongodb-service.test-ns.svc.cluster.local:27017" },
+    { _id: 1, host: "mongod-1.mongodb-service.test-ns.svc.cluster.local:27017" },
+    { _id: 2, host: "mongod-2.mongodb-service.test-ns.svc.cluster.local:27017" }
+  ]
+})
+
+#Create root user name and password
+db.getSiblingDB("admin").createUser({user: "devdb", pwd: "devdb123", roles: [ { role: "root", db: "admin" } ] });
+
+exit
+
+kubectl get ep -n test-ns ---> We will database pod ip in the endpoints
+NAME              ENDPOINTS                                                     AGE
+mongodb-service   192.168.187.2:27017,192.168.190.59:27017,192.168.58.9:27017   21m
+
+Assignment 
+create above script with configmap, secret, pv, pvc, probes, resources, hpa for container
+
+#creating an application
+
+vi deployment-statfulset.yml
+
+kind: Deployment
+metadata:
+  name: springdeployment
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      name: springapppod
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongodb-service
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: springapp
+  namespace: test-ns
+spec:
+  selector:
+    app: springapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: NodePort
+
+kubectl apply -f adeployment-statfulset.yml

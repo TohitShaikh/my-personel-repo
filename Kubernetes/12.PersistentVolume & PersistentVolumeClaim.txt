@@ -78,9 +78,7 @@ spec:
           value: devdb
         - name: MONGO_INITDB_ROOT_PASSWORD
           value: devdb@123
-        volumeMounts: 
-        - name: mongodb-host-volume
-          mountPath: /data/db
+        	
       volumes: 
       - name: mongodb-host-volume
         persistentVolumeClaim: 
@@ -103,13 +101,7 @@ kind: Service
 metadata:
   name: mongosvc
   namespace: test-ns
-spec:
-  type: ClusterIP
-  selector:
-    app: mongodb
-  ports:
-  - port: 27017
-    targetPort:  27017
+	
 
 kubectl apply -f spring-pvc.yml
 
