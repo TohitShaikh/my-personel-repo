@@ -1,0 +1,314 @@
+#Checking the labels of the node 
+
+kubectl get node --show-labels
+
+#Adding labels to node
+
+kubectl label nodes ip-172-31-21-50 name=workerOne
+
+kubectl get node ip-172-31-21-50 --show-labels
+
+# In the below script wee will give wrong lables for understanding purpose
+vi nodeselector.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-selector
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: selector
+  template:
+    metadata:
+      labels:
+        app: selector
+    spec:
+      containers:
+      - name: node-selector-container
+        image: dockerhandson/java-web-app:1
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+      nodeSelector:
+        name: workerone  # Specify the  correct node label to select nodes with.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-service
+  namespace: test-ns
+spec:
+  selector:
+    app: selector  # This should match the labels of the pods
+  ports:
+    - protocol: TCP
+      port: 80       # Port exposed by the service
+      targetPort: 8080  # Port on the container to forward traffic to
+  type: NodePort  # Default service type
+
+kubectl apply -f nodeselector.yml
+
+#It will show below after scduling
+
+kubectl describe pod node-selector-8ff8fcf89-47jpv -n test-ns
+Events:
+  Type     Reason            Age   From               Message
+  ----     ------            ----  ----               -------
+ Warning  FailedScheduling  46s   default-scheduler  0/4 nodes are available: 1 node(s) had untolerated taint {node-role.kubernetes.io/control-plane: }, 3 node(s)  didn't match Pod's node affinity/selector. preemption: 0/4 nodes are available: 4 Preemption is not helpful for scheduling.
+
+vi nodeAffinity-preferred.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-selector
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: selector
+  template:
+    metadata:
+      labels:
+        app: selector
+    spec:
+     affinity:
+      nodeAffinity:
+       preferredDuringSchedulingIgnoredDuringExecution:
+       - weight: 1
+         preference:
+          matchExpressions:
+          - key: name
+            operator: In
+            values:
+            - workerOne
+     containers:
+     - name: node-selector-container
+       image: dockerhandson/java-web-app:1
+       resources:
+        requests:
+         memory: "256Mi"
+         cpu: "200m"
+        limits:
+         memory: "256Mi"
+         cpu: "300"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-selector-svc
+  namespace: test-ns
+spec:
+  selector:
+    app: selector  # This should match the labels of the pods
+  ports:
+    - protocol: TCP
+      port: 80       # Port exposed by the service
+      targetPort: 8080  # Port on the container to forward traffic to
+  type: NodePort  # Default service type
+
+#We will now use hard rule 
+
+vi nodeAffinityrequired.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-affinity
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: selector
+  template:
+    metadata:
+      labels:
+        app: selector
+    spec:
+     affinity:
+      nodeAffinity:
+       requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: name
+            operator: In
+            values:
+            - workerOne
+     containers:
+     - name: node-selector-container
+       image: dockerhandson/java-web-app:1
+       resources:
+        requests:
+         memory: "256Mi"
+         cpu: "200m"
+        limits:
+         memory: "256Mi"
+         cpu: "300"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-affinity-svc
+  namespace: test-ns
+spec:
+  selector:
+    app: selector  # This should match the labels of the pods
+  ports:
+    - protocol: TCP
+      port: 80       # Port exposed by the service
+      targetPort: 8080  # Port on the container to forward traffic to
+  type: NodePort  # Default service type
+
+
+kubectl apply -f nodeAffintyrequired.yml
+
+kubectl get all -n test-ns -o wide
+
+kubectl delete all --all -n test-ns
+
+PodAffinity-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+vi podaffinity.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-affinity
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: selector
+  template:
+    metadata:
+      labels:
+        app: selector
+    spec:
+     affinity:
+      podAffinity:
+       requiredDuringSchedulingIgnoredDuringExecution:
+       - labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - nginx
+         topologyKey: "kubernetes.io/hostname"
+     containers:
+     - name: node-selector-container
+       image: dockerhandson/java-web-app:1
+       resources:
+        requests:
+         memory: "256Mi"
+         cpu: "200m"
+        limits:
+         memory: "256Mi"
+         cpu: "300"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pod-affinity-svc
+  namespace: test-ns
+spec:
+  selector:
+    app: selector  # This should match the labels of the pods
+  ports:
+    - protocol: TCP
+      port: 80       # Port exposed by the service
+      targetPort: 8080  # Port on the container to forward traffic to
+  type: NodePort  
+
+kubectl apply -f podaffinity.yml
+
+kubectl delete all --all -n test-ns
+
+#As it will be in pending state so we will create a niginx for making it up and running
+
+vi nginxpod.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  namespace: test-ns
+  labels:
+    app: nginx
+spec:
+  containers:
+  - name: nginx-container
+    image: nginx:latest
+    ports:
+    - containerPort: 80
+
+kubect apply -f nginxpod.yml
+
+kubectl delete all --all -n test-ns
+
+PodAntiAffinity-----------------------------------------------------------------------------------------------------------------------------------------------------
+
+vi pod-anti-affinity.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-anti-affinity
+  namespace: test-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: selector
+  template:
+    metadata:
+      labels:
+        app: selector
+    spec:
+     affinity:
+      podAntiAffinity:
+       requiredDuringSchedulingIgnoredDuringExecution:
+       	 labelSelector:
+          matchExpressions:
+          - key: app
+            operator: In
+            values:
+            - nginx
+         topologyKey: "kubernetes.io/hostname"
+     containers:
+     - name: node-selector-container
+       image: dockerhandson/java-web-app:1
+       resources:
+        requests:
+         memory: "256Mi"
+         cpu: "200m"
+        limits:
+         memory: "256Mi"
+         cpu: "300"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pod-anti-affinity-svc
+  namespace: test-ns
+spec:
+  selector:
+    app: selector  # This should match the labels of the pods
+  ports:
+    - protocol: TCP
+      port: 80       # Port exposed by the service
+      targetPort: 8080  # Port on the container to forward traffic to
+  type: NodePort  
+
+kubectl apply -f pod-anti-affinity.yml
+
+kubectl delete all --all -n test-ns
