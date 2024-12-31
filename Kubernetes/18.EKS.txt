@@ -1,0 +1,31 @@
+Pre-Requiste-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1.Aws account with admin/root privilegies
+
+
+Steps to create eks cluster
+
+1. Create a IAM Role for eks cluster
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

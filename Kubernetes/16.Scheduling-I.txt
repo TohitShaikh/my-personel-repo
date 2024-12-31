@@ -1,3 +1,5 @@
+NodeSelector---------------------------------------------------------------------------------------------------------------------------------------------------------
+
 #Checking the labels of the node 
 
 kubectl get node --show-labels
@@ -63,6 +65,10 @@ Events:
   ----     ------            ----  ----               -------
  Warning  FailedScheduling  46s   default-scheduler  0/4 nodes are available: 1 node(s) had untolerated taint {node-role.kubernetes.io/control-plane: }, 3 node(s)  didn't match Pod's node affinity/selector. preemption: 0/4 nodes are available: 4 Preemption is not helpful for scheduling.
 
+NodeAffinity-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#We are using soft rule preferred rule
+
 vi nodeAffinity-preferred.yml
 
 apiVersion: apps/v1
@@ -115,7 +121,9 @@ spec:
       targetPort: 8080  # Port on the container to forward traffic to
   type: NodePort  # Default service type
 
-#We will now use hard rule 
+kubectl apply -f nodeAffinity-preferred.yml
+
+#We will now use hard rule Required rules
 
 vi nodeAffinityrequired.yml
 

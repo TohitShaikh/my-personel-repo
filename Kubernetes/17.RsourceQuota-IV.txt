@@ -1,0 +1,135 @@
+kubectl api-resources | grep "ResourceQuota"
+--> resourcequotas                      quota        v1                                true         ResourceQuota
+
+vi resource-quota.yml
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: resourcequota-test-ns
+  namespace: test-ns
+spec:
+  hard:
+    requests.cpu: "1"                # Total CPU requests for all pods
+    requests.memory: "1Gi"           # Total memory requests for all pods
+    limits.cpu: "2"                  # Total CPU limits for all pods
+    limits.memory: "2Gi"             # Total memory limits for all pods
+
+kubectl apply -f resourcequota.yml
+
+kubectl get quota -n test-ns
+--> NAME                    AGE   REQUEST                                     LIMIT
+    resourcequota-test-ns   32s   requests.cpu: 0/1, requests.memory: 0/1Gi   limits.cpu: 0/2, limits.memory: 0/2Gi
+
+kubectl describe quota -n test-ns
+--> Name:            resourcequota-test-ns
+    Namespace:       test-ns
+    Resource         Used  Hard
+    --------         ----  ----
+    limits.cpu       0     2
+    limits.memory    0     2Gi
+    requests.cpu     0     1
+    requests.memory  0     1Gi
+
+#Deployment for above quota testing
+
+vi resource-quota-deployment.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: resource-quota-deployment
+  namespace: test-ns
+  labels:
+    app: resourcequota
+spec:
+  replicas: 3  # Number of replicas
+  selector:
+    matchLabels:
+      app: resourcequota
+  template:
+    metadata:
+      labels:
+        app: resourcequota
+    spec:
+      containers:
+      - name: resourcequota-cobtainer
+        image: dockerhandson/mavenwebapplication:1
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "500Mi"  # Minimum memory required
+            cpu: "500m"      # Minimum CPU required
+          limits:
+            memory: "500Mi"  # Maximum memory allowed
+            cpu: "500m"         # Maximum CPU allowed
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: resource-quota-svc
+  namespace: test-ns
+spec:
+  selector:
+    app: resourcequota  # This should match the labels of the pods
+  ports:
+    - protocol: TCP
+      port: 80        # Port exposed by the service
+      targetPort: 8080  # Port on the container
+  type: NodePort  # Change to ClusterIP or NodePort as needed
+
+#After applying the above file we will on only see 2 pod up and running but we have defined 4 replicas in deployment 
+
+LimitRange------------------------------------------------------------------------------------------------------------------------------------------------------------
+#We will try to create a niginx pod it will not be created so we need to create limitrange
+
+vi limitrange.yml
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: limitrange
+  namespace: test-ns
+spec:
+  limits:
+  - min:
+      cpu: "200m"          # Minimum CPU limit
+      memory: "256Mi"       # Minimum memory limit
+    max:
+      cpu: "500m"             # Maximum CPU limit
+      memory: "512Mi"      # Maximum memory limit
+    type: Container
+
+kubectl describe limitrange -n test-ns
+--> Name:       limitrange
+    Namespace:  test-ns
+    Type        Resource  Min    Max    Default Request  Default Limit  Max Limit/Request Ratio
+    ----        --------  ---    ---    ---------------  -------------  -----------------------
+    Container   cpu       200m   500m   500m             500m           -
+    Container   memory    256Mi  512Mi  512Mi            512Mi          -
+
+#After cmpleting the practical we will delete resource quota and limit range
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

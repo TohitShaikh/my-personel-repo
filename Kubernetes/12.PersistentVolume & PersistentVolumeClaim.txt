@@ -101,6 +101,13 @@ kind: Service
 metadata:
   name: mongosvc
   namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+  - port: 27017
+    targetPort:  27017
 	
 
 kubectl apply -f spring-pvc.yml

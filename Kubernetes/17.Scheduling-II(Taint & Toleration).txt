@@ -1,0 +1,113 @@
+Taint & Toleration----------------------------------------------------------------------------------------------------------------------------------------------------
+
+#Master machine will be having taint by default 
+
+kubectl describe nodes | grep "Taints"
+Taints:             node-role.kubernetes.io/control-plane:NoSchedule
+Taints:             <none>
+Taints:             <none>
+Taints:             <none>
+
+#Adding taint to one of the node
+
+kubectl taint nodes ip-172-31-21-50 node=HatesPods:NoSchedule
+
+kubectl describe node ip-172-31-21-50 | grep "Taints"
+Taints:             node=HatesPods:NoSchedule
+
+
+vi demo-deployment.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taint-demo
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: taint
+  template:
+    metadata:
+      labels:
+        app: taint
+    spec:
+      containers:
+      - name: taint-container
+        image: dockerhandson/maven-web-application:1
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taint-svc
+spec:
+  type: NodePort
+  selector:
+    app: taint
+  ports:
+  - port: 80
+    targetPort: 8080
+
+#After applying the above file we see that our 6 replicas will be deployed on the two nodes only because we have tainted the other 2 nodes
+
+#We will add toleration to above file and we will see that pod is running the tainted node
+
+vi toleration.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taint-demo
+  namespace: test-ns
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: taint
+  template:
+    metadata:
+      labels:
+        app: taint
+    spec:
+      containers:
+      - name: taint-container
+        image: dockerhandson/maven-web-application:1
+        ports:
+        - containerPort: 8080
+      toleration: 
+      - key: node
+        operator: Equal
+        value: HatesPods
+        effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taint-svc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: taint
+  ports:
+  - port: 80
+    targetPort: 8080
+
+
+#For untainting the nodes
+
+kubectl taint nodes ip-172-31-21-50 node=HatesPods:NoSchedule-
+
+kubectl describe node ip-172-31-21-50 | grep "Taints"
+
+
+
+
+
+
+
+
+
+

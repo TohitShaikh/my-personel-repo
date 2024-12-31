@@ -1,0 +1,211 @@
+kubectl api-resources | grep "networkpolicies"
+--> networkpolicies                     netpol           networking.k8s.io/v1              true         NetworkPolicy
+
+vi networkpolicies.yml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: test-ns
+spec:
+  podSelector:             # This policy applies to Pods with the label app: mongo
+    matchLabels:
+      app: mongo
+  policyTypes:
+  - Ingress                # This policy defines rules for incoming traffic
+  - Egress                 # This policy defines rules for outgoing traffic
+  ingress:                 # Rules for incoming traffic
+  - from:                  # Specify the sources allowed to send traffic
+    - podSelector:         # Allow traffic from Pods with the label role: springapp
+        matchLabels:
+          app: springapp
+    ports:                 # Specify the ports that are allowed for incoming traffic
+      - protocol: TCP
+        port: 27017        # Allow traffic on TCP port 27017
+  egress:                 # Rules for outgoing traffic
+  - to:                    # Specify the destinations allowed to receive traffic
+    - ipBlock:             # Allow traffic to a specific IP range
+        cidr: 10.0.0.0/16
+    ports:                 # Specify the ports that are allowed for outgoing traffic
+      - protocol: TCP
+        port: 5978        # Allow traffic on TCP port 5978
+
+#We create a deployment with springapp labels and database with replicaset with labels mongo for checking up file
+
+vi networkpolicies-deployment.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns  # You can change this to your desired namespace
+  labels:
+    app: springapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springappcontainer
+        image: dockerhandson/spring-boot-mongo:1
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1 #We need a service to access above application
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+  labels:
+    app: mongo
+spec:
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongocontainer
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongo
+  ports:
+  - port: 27017
+    targetPort:  27017
+
+
+kubectl apply -f networkpolicies-deployment.yml
+
+#We will connect to the pod
+
+kubectl exec -it springapp-6c9977d46f-mj8n9 -n test-ns -- sh
+
+apk add curl
+
+curl -v telnet:/mongosvc:27017
+
+#Access the application from web browser
+http://52.91.69.231:31713/
+
+#After applying the above file we will see that the application pod is able to communicate with database pod
+
+#We will add the default deny rule and try to access the application
+
+vi defautdeny-netpol.yml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: test-ns
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+#After applying the file we will see that pod is unable to connect to database pod.
+
+kubectl exec -it springapp-6c9977d46f-mj8n9 -n test-ns -- sh
+
+curl -v telnet:/mongosvc:27017
+
+#We will change the network policy and to traffic from a specific pod
+
+vi network-policy.yml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: test-ns
+spec:
+  podSelector:             # This policy applies to Pods with the label app: mongo
+    matchLabels:
+      app: mongo
+  policyTypes:
+  - Ingress                # This policy defines rules for incoming traffic
+  - Egress                 # This policy defines rules for outgoing traffic
+  ingress:                 # Rules for incoming traffic
+  - from:                  # Specify the sources allowed to send traffic
+    - podSelector:         # Allow traffic from Pods with the label role: springapp
+        matchLabels:
+          app: springapp
+    ports:                 # Specify the ports that are allowed for incoming traffic
+      - protocol: TCP
+        port: 27017        # Allow traffic on TCP port 27017
+
+kubectl apply -f network-policy.yml
+
+#After applying the file we will see that pod is able to connect to database pod.
+
+kubectl exec -it springapp-6c9977d46f-mj8n9 -n test-ns -- sh
+
+curl -v telnet:/mongosvc:27017
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
