@@ -1,21 +1,135 @@
 Pre-Requiste-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-1.Aws account with admin/root privilegies
+Aws account with admin/root privilegies
+
+1.Steps to create eks cluster
+
+Create a IAM Role for eks cluster
+IAM --> create role --> Select trusted entity (AWS service) --> Use case (EKS-Cluster) --> policy --> Role name (EKS-Cluster-Role) --> Done
+ 
+2.Create VPC using cloudformation template 
+
+https://s3.us-west-2.amazonaws.com/amazon-eks/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml
+
+cloudformation --> Create stack --> Prerequisite - Prepare template (Choose an existing template) --> paste above url in specify template area -->
+Stack name (EKS-Demo-Stack) --> leave as default --> create stack --> After creating stack we will resources are getting created
+
+3.Create EKS Cluster
+
+A.Navigate to EKS:
+
+ - Sign in to the AWS Management Console.
+ - In the services menu, search for and select EKS (Elastic Kubernetes Service).
+
+B.Create Cluster:
+ - Click on Create cluster.
+
+C.Configuration Options:
+ - Choose Custom configuration.
+
+D.Cluster Configuration:
+ - Name: Enter EKS-Demo.
+ - Cluster IAM role: Select the IAM role EKS-Cluster-Role.
+
+E.Kubernetes Version Settings:
+ - Kubernetes version: Select 1.31.
+ - Leave all other settings as default and click Next.
+
+F.Networking:
+ - Select VPC: Choose the desired VPC.
+ - Select Subnet: Choose the appropriate subnets/Select all the subnets of the vpc.
+ - Select Security Group: Choose the security group.
+ - Cluster endpoint access: Select both Public and private.
+ - Logging: Leave logging configuration as not needed for now.
+ - Click Next.
+
+G.Select Add-ons:
+ - Leave all add-ons as default and click Next.
+
+H.Configure Selected Add-ons Settings:
+ - Leave all settings as default and click Next.
+
+I.Review and Create:
+ - Review all the configurations you have made.
+ - Click on Create to initiate the creation of the EKS cluster.
+
+4.Configure Client machine with kubectl on Ec2 macine
+
+Connect to the machine 
+
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+kubectl version --client
+
+#As we have install kubectl but we need kubeconfig file also we will get that file with the help of awscli
+
+#Create An Instance (If Not Exists) Install AWS CLI, IAM Authenticator And kubectl. Configure AWS CLI using Root or IAM User Access Key & Secret Key. Or Attach IAM  With Required Policies
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+
+sudo yum  install unzip
+
+unzip awscliv2.zip
+
+sudo ./aws/install
+
+#If you have configure awscli on local laptop run below command to get the kubeconfig file 
+
+aws eks update-kubeconfig --name wonderful-disco-unicorn --region eu-west-2
+
+5.Create IAM Role for worker node add this policy AmazonEKSWorkerNodePolicy, AmazonEKS_CNI_Policy, AmazonEC2ContainerRegistryReadOnly
+
+IAM --> Create Role --> Select trusted entity (AWS service) --> Use case --> EC2 --> Next --> Add above permission --> Next --> Role name (EKS-Worker_Role) --> Create it .
+
+6.Create Node group
+
+A.Navigate to EKS:
+  - Sign in to the AWS Management Console.
+  - In the services menu, search for and select EKS (Elastic Kubernetes Service).
+    Select Your Cluster:
+
+B.Select Your Cluster:
+  - Click on Clusters in the left navigation pane.
+  - Select the cluster named EKS-Demo.
+
+C.Access Compute Section:
+  - Click on the Compute tab.
+ 	
+D.Add Node Group:
+  - Click on Add Node Group.
+
+E.Node Group Configuration:
+ - Name: Enter EKS-Node-Group.
+ - Node IAM role: Select EKS-Worker_Role.
+ - Leave all other settings as default and click Next.
+
+F.Node Group Compute Configuration:
+ - Instance type: Select t3.large.
+
+G.Node Group Scaling Configuration:
+ - Desired size: Enter 3.
+ - Minimum size: Enter 2.
+ - Maximum size: Enter 5.
+
+H.Node Group Update Configuration:
+ - Maximum unavailable:
+ - Number: Enter 1.
+
+I.Node Group Network Configuration:
+ - Select Subnet: Choose only private subnet
+ - Configure SSH Access to Nodes: Enable it
+   - SSH Key pair: Key2.pem
+   - Allow SSH remote access from: Selected security Group
+   - Security Group: Select security group from dropdown 
+ 
+1J.Review and Create:
+ - Review all the configurations you have made.
+ - Click on Create to initiate the creation of the Node Group. 
 
 
-Steps to create eks cluster
-
-1. Create a IAM Role for eks cluster
-
-
-
-
-
-
-
-
-
-
+#After creating the node you will be able to see an autoscaling group created and ec2 instances
 
 
 
